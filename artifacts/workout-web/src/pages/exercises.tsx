@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Activity, Dumbbell, Info, Cpu, Sparkles, X, Loader2, Plus } from "lucide-react";
+import { Search, Activity, Dumbbell, Info, Cpu, Sparkles, X, Loader2, Plus, Trash2 } from "lucide-react";
 
 const MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "arms", "core", "full_body"];
 const MUSCLE_ICONS: Record<string, string> = {
@@ -30,9 +30,25 @@ export default function Exercises() {
     category: "strength", description: "",
   });
 
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const aiSuggest = useAiSuggestExercises();
   const createExercise = useCreateExercise();
+
+  const handleDeleteExercise = async (id: number) => {
+    if (!confirm("Delete this exercise? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await fetch(`/api/exercises/${id}`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: getListExercisesQueryKey() });
+      if (showAiResults && aiSuggest.data) {
+        aiSuggest.reset();
+        setShowAiResults(false);
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const queryParams = {
     ...(search ? { search } : {}),
@@ -218,7 +234,7 @@ export default function Exercises() {
             ))
           ) : displayExercises?.map((exercise, idx) => (
             <Card key={exercise.id}
-              className={`bg-card/50 hover:bg-card/80 transition-all cursor-pointer group border-transparent hover:border-primary/40 ${showAiResults && idx === 0 ? "ring-1 ring-primary/30" : ""}`}
+              className={`bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40 ${showAiResults && idx === 0 ? "ring-1 ring-primary/30" : ""}`}
             >
               <CardContent className="p-4 flex gap-3 items-center">
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 border border-border group-hover:border-primary/30 transition-colors text-xl">
@@ -245,6 +261,15 @@ export default function Exercises() {
                     <p className="text-xs text-muted-foreground line-clamp-1">{exercise.description}</p>
                   )}
                 </div>
+                <button
+                  onClick={() => handleDeleteExercise(exercise.id)}
+                  disabled={deletingId === exercise.id}
+                  className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  {deletingId === exercise.id
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5" />}
+                </button>
               </CardContent>
             </Card>
           ))}

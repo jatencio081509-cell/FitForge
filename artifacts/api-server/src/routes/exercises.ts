@@ -48,6 +48,20 @@ router.post("/exercises", async (req, res): Promise<void> => {
   res.status(201).json(GetExerciseResponse.parse(serializeDates(exercise)));
 });
 
+router.delete("/exercises/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid exercise id" });
+    return;
+  }
+  const [deleted] = await db.delete(exercisesTable).where(eq(exercisesTable.id, id)).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Exercise not found" });
+    return;
+  }
+  res.sendStatus(204);
+});
+
 router.get("/exercises/:id", async (req, res): Promise<void> => {
   const params = GetExerciseParams.safeParse(req.params);
   if (!params.success) {
