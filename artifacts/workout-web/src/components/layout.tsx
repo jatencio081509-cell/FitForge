@@ -4,7 +4,7 @@ import { Activity, Dumbbell, CalendarRange, LineChart, Bot, User, LayoutDashboar
 
 export function Sidebar() {
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/workouts", label: "Workouts", icon: CalendarRange },
     { href: "/exercises", label: "Exercises", icon: Dumbbell },
     { href: "/log", label: "Log Workout", icon: Activity },

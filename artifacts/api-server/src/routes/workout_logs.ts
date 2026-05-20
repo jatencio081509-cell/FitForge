@@ -44,7 +44,7 @@ router.post("/workout-logs", async (req, res): Promise<void> => {
 
   const [log] = await db
     .insert(workoutLogsTable)
-    .values({ ...logData, totalVolume })
+    .values({ ...logData, totalVolume, completedAt: new Date(logData.completedAt) })
     .returning();
 
   if (sets && sets.length > 0) {

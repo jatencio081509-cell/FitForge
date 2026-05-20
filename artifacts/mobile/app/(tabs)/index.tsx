@@ -3,15 +3,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth, useUser } from "@clerk/expo";
 
 import { useColors } from "@/hooks/useColors";
 import { useListWorkoutLogs, useListWorkouts } from "@workspace/api-client-react";
@@ -26,6 +20,8 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { signOut } = useAuth();
+  const { user } = useUser();
 
   const { data: recentLogs } = useListWorkoutLogs({ limit: 3 });
   const { data: workouts } = useListWorkouts();
@@ -34,8 +30,8 @@ export default function HomeScreen() {
   const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 83;
 
   const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split("@")[0] || "Athlete";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -48,12 +44,22 @@ export default function HomeScreen() {
           colors={[colors.primary + "22", "transparent"]}
           style={[styles.hero, { paddingTop: topPadding + 20 }]}
         >
-          <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
-            {greeting} 👋
-          </Text>
-          <Text style={[styles.heroTitle, { color: colors.foreground, fontFamily: "Outfit_700Bold" }]}>
-            Ready to train?
-          </Text>
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+                {greeting} 👋
+              </Text>
+              <Text style={[styles.heroTitle, { color: colors.foreground, fontFamily: "Outfit_700Bold" }]}>
+                {firstName}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => signOut()}
+              style={[styles.signOutBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <Feather name="log-out" size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </View>
 
           <Pressable
             style={({ pressed }) => [styles.startBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
@@ -89,10 +95,7 @@ export default function HomeScreen() {
                     router.push(`/workout/${w.id}` as never);
                   }}
                 >
-                  <LinearGradient
-                    colors={[colors.primary + "18", "transparent"]}
-                    style={StyleSheet.absoluteFillObject}
-                  />
+                  <LinearGradient colors={[colors.primary + "18", "transparent"]} style={StyleSheet.absoluteFillObject} />
                   <View style={[styles.diffDot, { backgroundColor: DIFFICULTY_COLORS[w.difficulty] ?? colors.primary }]} />
                   <Text style={[styles.workoutCardName, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]} numberOfLines={2}>
                     {w.name}
@@ -144,7 +147,7 @@ export default function HomeScreen() {
                   No sessions yet
                 </Text>
                 <Text style={[styles.emptyBody, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
-                  Start a workout to track your progress
+                  Complete a workout to see it here
                 </Text>
               </View>
             </View>
@@ -157,14 +160,16 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hero: { paddingHorizontal: 20, paddingBottom: 28, gap: 10 },
-  greeting: { fontSize: 14 },
-  heroTitle: { fontSize: 32, lineHeight: 38, marginBottom: 6 },
+  hero: { paddingHorizontal: 20, paddingBottom: 28, gap: 16 },
+  heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  greeting: { fontSize: 13 },
+  heroTitle: { fontSize: 26, lineHeight: 32 },
+  signOutBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   startBtn: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, alignSelf: "stretch", justifyContent: "center" },
   startBtnText: { fontSize: 16, color: "#000" },
   section: { paddingHorizontal: 20, marginTop: 24 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  sectionTitle: { fontSize: 17 },
+  sectionTitle: { fontSize: 17, marginBottom: 12 },
   seeAll: { fontSize: 13 },
   horizontalList: { paddingRight: 20, gap: 10 },
   workoutCard: { width: 148, borderRadius: 16, borderWidth: 1, padding: 14, overflow: "hidden", gap: 6 },
