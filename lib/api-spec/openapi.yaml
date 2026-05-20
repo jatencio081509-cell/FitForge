@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FitForge AI Workout App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: exercises
+    description: Exercise library
+  - name: workouts
+    description: Workout plans
+  - name: logs
+    description: Workout session logs
+  - name: progress
+    description: Progress and analytics
+  - name: ai
+    description: AI coach and suggestions
+  - name: profile
+    description: User profile
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,350 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Exercise Library ──────────────────────────────────────────────────────
+  /exercises:
+    get:
+      operationId: listExercises
+      tags: [exercises]
+      summary: List exercises
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: muscle
+          schema:
+            type: string
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exercise"
+    post:
+      operationId: createExercise
+      tags: [exercises]
+      summary: Create custom exercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExerciseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+
+  /exercises/{id}:
+    get:
+      operationId: getExercise
+      tags: [exercises]
+      summary: Get exercise details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+        "404":
+          description: Not found
+
+  # ── Workout Plans ─────────────────────────────────────────────────────────
+  /workouts:
+    get:
+      operationId: listWorkouts
+      tags: [workouts]
+      summary: List workout plans
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workout"
+    post:
+      operationId: createWorkout
+      tags: [workouts]
+      summary: Create workout plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+
+  /workouts/{id}:
+    get:
+      operationId: getWorkout
+      tags: [workouts]
+      summary: Get workout plan with exercises
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateWorkout
+      tags: [workouts]
+      summary: Update workout plan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+    delete:
+      operationId: deleteWorkout
+      tags: [workouts]
+      summary: Delete workout plan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Workout Logs ──────────────────────────────────────────────────────────
+  /workout-logs:
+    get:
+      operationId: listWorkoutLogs
+      tags: [logs]
+      summary: List completed workout sessions
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutLog"
+    post:
+      operationId: createWorkoutLog
+      tags: [logs]
+      summary: Log a completed workout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutLogInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutLog"
+
+  /workout-logs/{id}:
+    get:
+      operationId: getWorkoutLog
+      tags: [logs]
+      summary: Get workout log details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutLogDetail"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteWorkoutLog
+      tags: [logs]
+      summary: Delete workout log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Progress & Analytics (wow endpoints) ──────────────────────────────────
+  /progress/summary:
+    get:
+      operationId: getProgressSummary
+      tags: [progress]
+      summary: Get overall progress summary stats
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSummary"
+
+  /progress/weekly:
+    get:
+      operationId: getWeeklyProgress
+      tags: [progress]
+      summary: Get weekly workout activity for the last 8 weeks
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeeklyActivity"
+
+  /progress/personal-records:
+    get:
+      operationId: getPersonalRecords
+      tags: [progress]
+      summary: Get personal records per exercise
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonalRecord"
+
+  # ── AI Coach ─────────────────────────────────────────────────────────────
+  /ai/chat:
+    post:
+      operationId: aiChat
+      tags: [ai]
+      summary: Chat with AI workout coach
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiChatInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachReply"
+
+  /ai/generate-workout:
+    post:
+      operationId: aiGenerateWorkout
+      tags: [ai]
+      summary: Generate a personalized workout plan with AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiGenerateWorkoutInput"
+      responses:
+        "200":
+          description: Generated workout plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+
+  # ── User Profile ──────────────────────────────────────────────────────────
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get user profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    patch:
+      operationId: updateProfile
+      tags: [profile]
+      summary: Update user profile and fitness goals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +387,426 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    # ── Exercise ──────────────────────────────────────────────────────────
+    Exercise:
+      type: object
+      required: [id, name, category, muscleGroup, equipment, isCustom, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        category:
+          type: string
+          description: "strength, cardio, flexibility, sports"
+        muscleGroup:
+          type: string
+          description: "chest, back, legs, shoulders, arms, core, full_body"
+        equipment:
+          type: string
+          description: "barbell, dumbbell, machine, bodyweight, cable, kettlebell, resistance_band, other"
+        instructions:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        isCustom:
+          type: boolean
+        createdAt:
+          type: string
+
+    ExerciseInput:
+      type: object
+      required: [name, category, muscleGroup, equipment]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        muscleGroup:
+          type: string
+        equipment:
+          type: string
+        instructions:
+          type: string
+
+    # ── Workout Plan ──────────────────────────────────────────────────────
+    Workout:
+      type: object
+      required: [id, name, difficulty, estimatedMinutes, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        difficulty:
+          type: string
+          description: "beginner, intermediate, advanced"
+        estimatedMinutes:
+          type: integer
+        category:
+          type: ["string", "null"]
+        isAiGenerated:
+          type: boolean
+        exerciseCount:
+          type: integer
+        createdAt:
+          type: string
+
+    WorkoutInput:
+      type: object
+      required: [name, difficulty, estimatedMinutes]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        difficulty:
+          type: string
+        estimatedMinutes:
+          type: integer
+        category:
+          type: string
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutExerciseInput"
+
+    WorkoutUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        difficulty:
+          type: string
+        estimatedMinutes:
+          type: integer
+        category:
+          type: string
+
+    WorkoutExerciseInput:
+      type: object
+      required: [exerciseId, sets, reps]
+      properties:
+        exerciseId:
+          type: integer
+        sets:
+          type: integer
+        reps:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        restSeconds:
+          type: integer
+        notes:
+          type: string
+        orderIndex:
+          type: integer
+
+    WorkoutExercise:
+      type: object
+      required: [id, exerciseId, sets, reps, orderIndex]
+      properties:
+        id:
+          type: integer
+        exerciseId:
+          type: integer
+        exerciseName:
+          type: string
+        muscleGroup:
+          type: string
+        equipment:
+          type: string
+        sets:
+          type: integer
+        reps:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        restSeconds:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+
+    WorkoutDetail:
+      type: object
+      required: [id, name, difficulty, estimatedMinutes, createdAt, exercises]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        difficulty:
+          type: string
+        estimatedMinutes:
+          type: integer
+        category:
+          type: ["string", "null"]
+        isAiGenerated:
+          type: boolean
+        createdAt:
+          type: string
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutExercise"
+
+    # ── Workout Logs ──────────────────────────────────────────────────────
+    WorkoutLog:
+      type: object
+      required: [id, workoutName, completedAt, durationMinutes]
+      properties:
+        id:
+          type: integer
+        workoutId:
+          type: ["integer", "null"]
+        workoutName:
+          type: string
+        completedAt:
+          type: string
+        durationMinutes:
+          type: integer
+        totalVolume:
+          type: ["number", "null"]
+          description: "total weight × reps across all sets"
+        notes:
+          type: ["string", "null"]
+        rating:
+          type: ["integer", "null"]
+
+    WorkoutLogInput:
+      type: object
+      required: [workoutName, completedAt, durationMinutes]
+      properties:
+        workoutId:
+          type: integer
+        workoutName:
+          type: string
+        completedAt:
+          type: string
+        durationMinutes:
+          type: integer
+        notes:
+          type: string
+        rating:
+          type: integer
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutLogSetInput"
+
+    WorkoutLogSetInput:
+      type: object
+      required: [exerciseId, setNumber, reps]
+      properties:
+        exerciseId:
+          type: integer
+        setNumber:
+          type: integer
+        reps:
+          type: integer
+        weight:
+          type: number
+        notes:
+          type: string
+
+    WorkoutLogSet:
+      type: object
+      required: [id, exerciseId, setNumber, reps]
+      properties:
+        id:
+          type: integer
+        exerciseId:
+          type: integer
+        exerciseName:
+          type: string
+        setNumber:
+          type: integer
+        reps:
+          type: integer
+        weight:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+
+    WorkoutLogDetail:
+      type: object
+      required: [id, workoutName, completedAt, durationMinutes, sets]
+      properties:
+        id:
+          type: integer
+        workoutId:
+          type: ["integer", "null"]
+        workoutName:
+          type: string
+        completedAt:
+          type: string
+        durationMinutes:
+          type: integer
+        totalVolume:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+        rating:
+          type: ["integer", "null"]
+        sets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkoutLogSet"
+
+    # ── Progress & Analytics ──────────────────────────────────────────────
+    ProgressSummary:
+      type: object
+      required: [totalWorkouts, totalMinutes, currentStreak, longestStreak, totalVolume, workoutsThisWeek, workoutsThisMonth]
+      properties:
+        totalWorkouts:
+          type: integer
+        totalMinutes:
+          type: integer
+        currentStreak:
+          type: integer
+          description: "consecutive days with a workout"
+        longestStreak:
+          type: integer
+        totalVolume:
+          type: number
+          description: "total weight lifted (kg)"
+        workoutsThisWeek:
+          type: integer
+        workoutsThisMonth:
+          type: integer
+        favoriteCategory:
+          type: ["string", "null"]
+
+    WeeklyActivity:
+      type: object
+      required: [week, workoutCount, totalMinutes, totalVolume]
+      properties:
+        week:
+          type: string
+          description: "ISO week start date"
+        workoutCount:
+          type: integer
+        totalMinutes:
+          type: integer
+        totalVolume:
+          type: number
+
+    PersonalRecord:
+      type: object
+      required: [exerciseId, exerciseName, maxWeight, maxReps, achievedAt]
+      properties:
+        exerciseId:
+          type: integer
+        exerciseName:
+          type: string
+        muscleGroup:
+          type: string
+        maxWeight:
+          type: ["number", "null"]
+        maxReps:
+          type: integer
+        achievedAt:
+          type: string
+
+    # ── AI ────────────────────────────────────────────────────────────────
+    AiChatInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        context:
+          type: string
+          description: "Optional context like current workout plan or fitness goals"
+
+    CoachReply:
+      type: object
+      required: [reply, timestamp]
+      properties:
+        reply:
+          type: string
+        timestamp:
+          type: string
+
+    AiGenerateWorkoutInput:
+      type: object
+      required: [goal, fitnessLevel]
+      properties:
+        goal:
+          type: string
+          description: "muscle_gain, fat_loss, endurance, strength, flexibility"
+        fitnessLevel:
+          type: string
+          description: "beginner, intermediate, advanced"
+        availableEquipment:
+          type: array
+          items:
+            type: string
+        durationMinutes:
+          type: integer
+        muscleGroups:
+          type: array
+          items:
+            type: string
+
+    # ── User Profile ──────────────────────────────────────────────────────
+    UserProfile:
+      type: object
+      required: [id, name, fitnessGoal, fitnessLevel, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        age:
+          type: ["integer", "null"]
+        weight:
+          type: ["number", "null"]
+        height:
+          type: ["number", "null"]
+        fitnessGoal:
+          type: string
+          description: "muscle_gain, fat_loss, endurance, strength, flexibility, general_fitness"
+        fitnessLevel:
+          type: string
+          description: "beginner, intermediate, advanced"
+        weeklyWorkoutTarget:
+          type: integer
+        preferredEquipment:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+        weight:
+          type: number
+        height:
+          type: number
+        fitnessGoal:
+          type: string
+        fitnessLevel:
+          type: string
+        weeklyWorkoutTarget:
+          type: integer
+        preferredEquipment:
+          type: string
