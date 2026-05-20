@@ -8,6 +8,8 @@ export const userProfileTable = pgTable("user_profile", {
   age: integer("age"),
   weight: real("weight"),
   height: real("height"),
+  weightGoal: real("weight_goal"),
+  weightUnit: text("weight_unit").notNull().default("kg"),
   fitnessGoal: text("fitness_goal").notNull().default("general_fitness"),
   fitnessLevel: text("fitness_level").notNull().default("beginner"),
   weeklyWorkoutTarget: integer("weekly_workout_target").notNull().default(3),

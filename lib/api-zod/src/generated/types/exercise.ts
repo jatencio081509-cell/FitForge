@@ -11,11 +11,8 @@ export interface Exercise {
   name: string;
   /** @nullable */
   description?: string | null;
-  /** strength, cardio, flexibility, sports */
   category: string;
-  /** chest, back, legs, shoulders, arms, core, full_body */
   muscleGroup: string;
-  /** barbell, dumbbell, machine, bodyweight, cable, kettlebell, resistance_band, other */
   equipment: string;
   /** @nullable */
   instructions?: string | null;

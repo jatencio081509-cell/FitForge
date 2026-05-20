@@ -15,9 +15,10 @@ export interface UserProfile {
   weight?: number | null;
   /** @nullable */
   height?: number | null;
-  /** muscle_gain, fat_loss, endurance, strength, flexibility, general_fitness */
+  /** @nullable */
+  weightGoal?: number | null;
+  weightUnit?: string;
   fitnessGoal: string;
-  /** beginner, intermediate, advanced */
   fitnessLevel: string;
   weeklyWorkoutTarget?: number;
   /** @nullable */

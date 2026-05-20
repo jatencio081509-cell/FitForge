@@ -14,11 +14,8 @@ export interface Exercise {
   name: string;
   /** @nullable */
   description?: string | null;
-  /** strength, cardio, flexibility, sports */
   category: string;
-  /** chest, back, legs, shoulders, arms, core, full_body */
   muscleGroup: string;
-  /** barbell, dumbbell, machine, bodyweight, cable, kettlebell, resistance_band, other */
   equipment: string;
   /** @nullable */
   instructions?: string | null;
@@ -42,7 +39,6 @@ export interface Workout {
   name: string;
   /** @nullable */
   description?: string | null;
-  /** beginner, intermediate, advanced */
   difficulty: string;
   estimatedMinutes: number;
   /** @nullable */
@@ -118,10 +114,7 @@ export interface WorkoutLog {
   workoutName: string;
   completedAt: string;
   durationMinutes: number;
-  /**
-     * total weight × reps across all sets
-     * @nullable
-     */
+  /** @nullable */
   totalVolume?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -178,10 +171,8 @@ export interface WorkoutLogDetail {
 export interface ProgressSummary {
   totalWorkouts: number;
   totalMinutes: number;
-  /** consecutive days with a workout */
   currentStreak: number;
   longestStreak: number;
-  /** total weight lifted (kg) */
   totalVolume: number;
   workoutsThisWeek: number;
   workoutsThisMonth: number;
@@ -190,7 +181,6 @@ export interface ProgressSummary {
 }
 
 export interface WeeklyActivity {
-  /** ISO week start date */
   week: string;
   workoutCount: number;
   totalMinutes: number;
@@ -209,7 +199,6 @@ export interface PersonalRecord {
 
 export interface AiChatInput {
   message: string;
-  /** Optional context like current workout plan or fitness goals */
   context?: string;
 }
 
@@ -219,13 +208,38 @@ export interface CoachReply {
 }
 
 export interface AiGenerateWorkoutInput {
-  /** muscle_gain, fat_loss, endurance, strength, flexibility */
   goal: string;
-  /** beginner, intermediate, advanced */
   fitnessLevel: string;
   availableEquipment?: string[];
   durationMinutes?: number;
   muscleGroups?: string[];
+}
+
+export interface AiSuggestExercisesInput {
+  /** Natural language query e.g. 'exercises for big arms' or 'cardio that burns fat' */
+  query: string;
+  muscleGroups?: string[];
+  equipment?: string[];
+}
+
+export interface AiSuggestExercisesResult {
+  exercises: Exercise[];
+  explanation: string;
+}
+
+export interface AiWeightAdviceInput {
+  currentWeight: number;
+  goalWeight: number;
+  /** kg or lbs */
+  unit: string;
+  fitnessGoal: string;
+  fitnessLevel: string;
+  weeklyWorkouts: number;
+}
+
+export interface AiWeightAdviceResult {
+  advice: string;
+  timestamp: string;
 }
 
 export interface UserProfile {
@@ -237,9 +251,10 @@ export interface UserProfile {
   weight?: number | null;
   /** @nullable */
   height?: number | null;
-  /** muscle_gain, fat_loss, endurance, strength, flexibility, general_fitness */
+  /** @nullable */
+  weightGoal?: number | null;
+  weightUnit?: string;
   fitnessGoal: string;
-  /** beginner, intermediate, advanced */
   fitnessLevel: string;
   weeklyWorkoutTarget?: number;
   /** @nullable */
@@ -252,10 +267,27 @@ export interface UserProfileUpdate {
   age?: number;
   weight?: number;
   height?: number;
+  weightGoal?: number;
+  weightUnit?: string;
   fitnessGoal?: string;
   fitnessLevel?: string;
   weeklyWorkoutTarget?: number;
   preferredEquipment?: string;
+}
+
+export interface WeightLogEntry {
+  id: number;
+  weight: number;
+  unit: string;
+  /** @nullable */
+  notes?: string | null;
+  loggedAt: string;
+}
+
+export interface WeightLogInput {
+  weight: number;
+  unit?: string;
+  notes?: string;
 }
 
 export type ListExercisesParams = {

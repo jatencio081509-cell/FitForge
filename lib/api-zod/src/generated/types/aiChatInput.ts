@@ -8,6 +8,5 @@
 
 export interface AiChatInput {
   message: string;
-  /** Optional context like current workout plan or fitness goals */
   context?: string;
 }

@@ -22,6 +22,10 @@ import type {
 import type {
   AiChatInput,
   AiGenerateWorkoutInput,
+  AiSuggestExercisesInput,
+  AiSuggestExercisesResult,
+  AiWeightAdviceInput,
+  AiWeightAdviceResult,
   CoachReply,
   Exercise,
   ExerciseInput,
@@ -33,6 +37,8 @@ import type {
   UserProfile,
   UserProfileUpdate,
   WeeklyActivity,
+  WeightLogEntry,
+  WeightLogInput,
   Workout,
   WorkoutDetail,
   WorkoutInput,
@@ -1405,6 +1411,148 @@ export const useAiGenerateWorkout = <TError = ErrorType<unknown>,
       return useMutation(getAiGenerateWorkoutMutationOptions(options));
     }
 
+export const getAiSuggestExercisesUrl = () => {
+
+
+
+
+  return `/api/ai/suggest-exercises`
+}
+
+/**
+ * @summary AI suggests exercises based on natural language query
+ */
+export const aiSuggestExercises = async (aiSuggestExercisesInput: AiSuggestExercisesInput, options?: RequestInit): Promise<AiSuggestExercisesResult> => {
+
+  return customFetch<AiSuggestExercisesResult>(getAiSuggestExercisesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      aiSuggestExercisesInput,)
+  }
+);}
+
+
+
+
+export const getAiSuggestExercisesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSuggestExercises>>, TError,{data: BodyType<AiSuggestExercisesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiSuggestExercises>>, TError,{data: BodyType<AiSuggestExercisesInput>}, TContext> => {
+
+const mutationKey = ['aiSuggestExercises'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSuggestExercises>>, {data: BodyType<AiSuggestExercisesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiSuggestExercises(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiSuggestExercisesMutationResult = NonNullable<Awaited<ReturnType<typeof aiSuggestExercises>>>
+    export type AiSuggestExercisesMutationBody = BodyType<AiSuggestExercisesInput>
+    export type AiSuggestExercisesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI suggests exercises based on natural language query
+ */
+export const useAiSuggestExercises = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSuggestExercises>>, TError,{data: BodyType<AiSuggestExercisesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiSuggestExercises>>,
+        TError,
+        {data: BodyType<AiSuggestExercisesInput>},
+        TContext
+      > => {
+      return useMutation(getAiSuggestExercisesMutationOptions(options));
+    }
+
+export const getAiWeightAdviceUrl = () => {
+
+
+
+
+  return `/api/ai/weight-advice`
+}
+
+/**
+ * @summary Get AI advice for achieving a weight goal
+ */
+export const aiWeightAdvice = async (aiWeightAdviceInput: AiWeightAdviceInput, options?: RequestInit): Promise<AiWeightAdviceResult> => {
+
+  return customFetch<AiWeightAdviceResult>(getAiWeightAdviceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      aiWeightAdviceInput,)
+  }
+);}
+
+
+
+
+export const getAiWeightAdviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiWeightAdvice>>, TError,{data: BodyType<AiWeightAdviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiWeightAdvice>>, TError,{data: BodyType<AiWeightAdviceInput>}, TContext> => {
+
+const mutationKey = ['aiWeightAdvice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiWeightAdvice>>, {data: BodyType<AiWeightAdviceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiWeightAdvice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiWeightAdviceMutationResult = NonNullable<Awaited<ReturnType<typeof aiWeightAdvice>>>
+    export type AiWeightAdviceMutationBody = BodyType<AiWeightAdviceInput>
+    export type AiWeightAdviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Get AI advice for achieving a weight goal
+ */
+export const useAiWeightAdvice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiWeightAdvice>>, TError,{data: BodyType<AiWeightAdviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiWeightAdvice>>,
+        TError,
+        {data: BodyType<AiWeightAdviceInput>},
+        TContext
+      > => {
+      return useMutation(getAiWeightAdviceMutationOptions(options));
+    }
+
 export const getGetProfileUrl = () => {
 
 
@@ -1551,5 +1699,153 @@ export const useUpdateProfile = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateProfileMutationOptions(options));
+    }
+
+export const getListWeightLogsUrl = () => {
+
+
+
+
+  return `/api/profile/weight-log`
+}
+
+/**
+ * @summary List weight log entries
+ */
+export const listWeightLogs = async ( options?: RequestInit): Promise<WeightLogEntry[]> => {
+
+  return customFetch<WeightLogEntry[]>(getListWeightLogsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWeightLogsQueryKey = () => {
+    return [
+    `/api/profile/weight-log`
+    ] as const;
+    }
+
+
+export const getListWeightLogsQueryOptions = <TData = Awaited<ReturnType<typeof listWeightLogs>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWeightLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWeightLogsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWeightLogs>>> = ({ signal }) => listWeightLogs({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWeightLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWeightLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listWeightLogs>>>
+export type ListWeightLogsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List weight log entries
+ */
+
+export function useListWeightLogs<TData = Awaited<ReturnType<typeof listWeightLogs>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWeightLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWeightLogsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateWeightLogUrl = () => {
+
+
+
+
+  return `/api/profile/weight-log`
+}
+
+/**
+ * @summary Add a weight log entry
+ */
+export const createWeightLog = async (weightLogInput: WeightLogInput, options?: RequestInit): Promise<WeightLogEntry> => {
+
+  return customFetch<WeightLogEntry>(getCreateWeightLogUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      weightLogInput,)
+  }
+);}
+
+
+
+
+export const getCreateWeightLogMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWeightLog>>, TError,{data: BodyType<WeightLogInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWeightLog>>, TError,{data: BodyType<WeightLogInput>}, TContext> => {
+
+const mutationKey = ['createWeightLog'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWeightLog>>, {data: BodyType<WeightLogInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWeightLog(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWeightLogMutationResult = NonNullable<Awaited<ReturnType<typeof createWeightLog>>>
+    export type CreateWeightLogMutationBody = BodyType<WeightLogInput>
+    export type CreateWeightLogMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a weight log entry
+ */
+export const useCreateWeightLog = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWeightLog>>, TError,{data: BodyType<WeightLogInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWeightLog>>,
+        TError,
+        {data: BodyType<WeightLogInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWeightLogMutationOptions(options));
     }
 

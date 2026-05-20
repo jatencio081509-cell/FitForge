@@ -1,11 +1,15 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, userProfileTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
+import { db, userProfileTable, weightLogsTable } from "@workspace/db";
 import {
   GetProfileResponse,
   UpdateProfileBody,
   UpdateProfileResponse,
+  ListWeightLogsResponse,
+  ListWeightLogsResponseItem,
+  CreateWeightLogBody,
 } from "@workspace/api-zod";
+import { serializeDates } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -27,7 +31,7 @@ async function getOrCreateProfile() {
 
 router.get("/profile", async (_req, res): Promise<void> => {
   const profile = await getOrCreateProfile();
-  res.json(GetProfileResponse.parse(profile));
+  res.json(GetProfileResponse.parse(serializeDates(profile)));
 });
 
 router.patch("/profile", async (req, res): Promise<void> => {
@@ -45,7 +49,31 @@ router.patch("/profile", async (req, res): Promise<void> => {
     .where(eq(userProfileTable.id, profile.id))
     .returning();
 
-  res.json(UpdateProfileResponse.parse(updated));
+  res.json(UpdateProfileResponse.parse(serializeDates(updated)));
+});
+
+router.get("/profile/weight-log", async (_req, res): Promise<void> => {
+  const logs = await db
+    .select()
+    .from(weightLogsTable)
+    .orderBy(desc(weightLogsTable.loggedAt))
+    .limit(60);
+  res.json(ListWeightLogsResponse.parse(serializeDates(logs)));
+});
+
+router.post("/profile/weight-log", async (req, res): Promise<void> => {
+  const parsed = CreateWeightLogBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [log] = await db
+    .insert(weightLogsTable)
+    .values({ weight: parsed.data.weight, unit: parsed.data.unit ?? "kg", notes: parsed.data.notes })
+    .returning();
+
+  res.status(201).json(ListWeightLogsResponseItem.parse(serializeDates(log)));
 });
 
 export default router;

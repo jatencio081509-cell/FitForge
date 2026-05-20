@@ -13,10 +13,7 @@ export interface WorkoutLog {
   workoutName: string;
   completedAt: string;
   durationMinutes: number;
-  /**
-     * total weight × reps across all sets
-     * @nullable
-     */
+  /** @nullable */
   totalVolume?: number | null;
   /** @nullable */
   notes?: string | null;

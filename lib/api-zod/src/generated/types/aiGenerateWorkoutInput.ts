@@ -7,9 +7,7 @@
  */
 
 export interface AiGenerateWorkoutInput {
-  /** muscle_gain, fat_loss, endurance, strength, flexibility */
   goal: string;
-  /** beginner, intermediate, advanced */
   fitnessLevel: string;
   availableEquipment?: string[];
   durationMinutes?: number;

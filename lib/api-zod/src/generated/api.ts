@@ -29,9 +29,9 @@ export const ListExercisesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.string().describe('strength, cardio, flexibility, sports'),
-  "muscleGroup": zod.string().describe('chest, back, legs, shoulders, arms, core, full_body'),
-  "equipment": zod.string().describe('barbell, dumbbell, machine, bodyweight, cable, kettlebell, resistance_band, other'),
+  "category": zod.string(),
+  "muscleGroup": zod.string(),
+  "equipment": zod.string(),
   "instructions": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
   "isCustom": zod.boolean(),
@@ -64,9 +64,9 @@ export const GetExerciseResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
-  "category": zod.string().describe('strength, cardio, flexibility, sports'),
-  "muscleGroup": zod.string().describe('chest, back, legs, shoulders, arms, core, full_body'),
-  "equipment": zod.string().describe('barbell, dumbbell, machine, bodyweight, cable, kettlebell, resistance_band, other'),
+  "category": zod.string(),
+  "muscleGroup": zod.string(),
+  "equipment": zod.string(),
   "instructions": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
   "isCustom": zod.boolean(),
@@ -81,7 +81,7 @@ export const ListWorkoutsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
-  "difficulty": zod.string().describe('beginner, intermediate, advanced'),
+  "difficulty": zod.string(),
   "estimatedMinutes": zod.number(),
   "category": zod.string().nullish(),
   "isAiGenerated": zod.boolean().optional(),
@@ -163,7 +163,7 @@ export const UpdateWorkoutResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
-  "difficulty": zod.string().describe('beginner, intermediate, advanced'),
+  "difficulty": zod.string(),
   "estimatedMinutes": zod.number(),
   "category": zod.string().nullish(),
   "isAiGenerated": zod.boolean().optional(),
@@ -193,7 +193,7 @@ export const ListWorkoutLogsResponseItem = zod.object({
   "workoutName": zod.string(),
   "completedAt": zod.string(),
   "durationMinutes": zod.number(),
-  "totalVolume": zod.number().nullish().describe('total weight × reps across all sets'),
+  "totalVolume": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "rating": zod.number().nullish()
 })
@@ -262,9 +262,9 @@ export const DeleteWorkoutLogParams = zod.object({
 export const GetProgressSummaryResponse = zod.object({
   "totalWorkouts": zod.number(),
   "totalMinutes": zod.number(),
-  "currentStreak": zod.number().describe('consecutive days with a workout'),
+  "currentStreak": zod.number(),
   "longestStreak": zod.number(),
-  "totalVolume": zod.number().describe('total weight lifted (kg)'),
+  "totalVolume": zod.number(),
   "workoutsThisWeek": zod.number(),
   "workoutsThisMonth": zod.number(),
   "favoriteCategory": zod.string().nullish()
@@ -275,7 +275,7 @@ export const GetProgressSummaryResponse = zod.object({
  * @summary Get weekly workout activity for the last 8 weeks
  */
 export const GetWeeklyProgressResponseItem = zod.object({
-  "week": zod.string().describe('ISO week start date'),
+  "week": zod.string(),
   "workoutCount": zod.number(),
   "totalMinutes": zod.number(),
   "totalVolume": zod.number()
@@ -302,7 +302,7 @@ export const GetPersonalRecordsResponse = zod.array(GetPersonalRecordsResponseIt
  */
 export const AiChatBody = zod.object({
   "message": zod.string(),
-  "context": zod.string().optional().describe('Optional context like current workout plan or fitness goals')
+  "context": zod.string().optional()
 })
 
 export const AiChatResponse = zod.object({
@@ -315,8 +315,8 @@ export const AiChatResponse = zod.object({
  * @summary Generate a personalized workout plan with AI
  */
 export const AiGenerateWorkoutBody = zod.object({
-  "goal": zod.string().describe('muscle_gain, fat_loss, endurance, strength, flexibility'),
-  "fitnessLevel": zod.string().describe('beginner, intermediate, advanced'),
+  "goal": zod.string(),
+  "fitnessLevel": zod.string(),
   "availableEquipment": zod.array(zod.string()).optional(),
   "durationMinutes": zod.number().optional(),
   "muscleGroups": zod.array(zod.string()).optional()
@@ -326,12 +326,56 @@ export const AiGenerateWorkoutResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
-  "difficulty": zod.string().describe('beginner, intermediate, advanced'),
+  "difficulty": zod.string(),
   "estimatedMinutes": zod.number(),
   "category": zod.string().nullish(),
   "isAiGenerated": zod.boolean().optional(),
   "exerciseCount": zod.number().optional(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary AI suggests exercises based on natural language query
+ */
+export const AiSuggestExercisesBody = zod.object({
+  "query": zod.string().describe('Natural language query e.g. \'exercises for big arms\' or \'cardio that burns fat\''),
+  "muscleGroups": zod.array(zod.string()).optional(),
+  "equipment": zod.array(zod.string()).optional()
+})
+
+export const AiSuggestExercisesResponse = zod.object({
+  "exercises": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string(),
+  "muscleGroup": zod.string(),
+  "equipment": zod.string(),
+  "instructions": zod.string().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "isCustom": zod.boolean(),
+  "createdAt": zod.string()
+})),
+  "explanation": zod.string()
+})
+
+
+/**
+ * @summary Get AI advice for achieving a weight goal
+ */
+export const AiWeightAdviceBody = zod.object({
+  "currentWeight": zod.number(),
+  "goalWeight": zod.number(),
+  "unit": zod.string().describe('kg or lbs'),
+  "fitnessGoal": zod.string(),
+  "fitnessLevel": zod.string(),
+  "weeklyWorkouts": zod.number()
+})
+
+export const AiWeightAdviceResponse = zod.object({
+  "advice": zod.string(),
+  "timestamp": zod.string()
 })
 
 
@@ -344,8 +388,10 @@ export const GetProfileResponse = zod.object({
   "age": zod.number().nullish(),
   "weight": zod.number().nullish(),
   "height": zod.number().nullish(),
-  "fitnessGoal": zod.string().describe('muscle_gain, fat_loss, endurance, strength, flexibility, general_fitness'),
-  "fitnessLevel": zod.string().describe('beginner, intermediate, advanced'),
+  "weightGoal": zod.number().nullish(),
+  "weightUnit": zod.string().optional(),
+  "fitnessGoal": zod.string(),
+  "fitnessLevel": zod.string(),
   "weeklyWorkoutTarget": zod.number().optional(),
   "preferredEquipment": zod.string().nullish(),
   "createdAt": zod.string()
@@ -360,6 +406,8 @@ export const UpdateProfileBody = zod.object({
   "age": zod.number().optional(),
   "weight": zod.number().optional(),
   "height": zod.number().optional(),
+  "weightGoal": zod.number().optional(),
+  "weightUnit": zod.string().optional(),
   "fitnessGoal": zod.string().optional(),
   "fitnessLevel": zod.string().optional(),
   "weeklyWorkoutTarget": zod.number().optional(),
@@ -372,11 +420,36 @@ export const UpdateProfileResponse = zod.object({
   "age": zod.number().nullish(),
   "weight": zod.number().nullish(),
   "height": zod.number().nullish(),
-  "fitnessGoal": zod.string().describe('muscle_gain, fat_loss, endurance, strength, flexibility, general_fitness'),
-  "fitnessLevel": zod.string().describe('beginner, intermediate, advanced'),
+  "weightGoal": zod.number().nullish(),
+  "weightUnit": zod.string().optional(),
+  "fitnessGoal": zod.string(),
+  "fitnessLevel": zod.string(),
   "weeklyWorkoutTarget": zod.number().optional(),
   "preferredEquipment": zod.string().nullish(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary List weight log entries
+ */
+export const ListWeightLogsResponseItem = zod.object({
+  "id": zod.number(),
+  "weight": zod.number(),
+  "unit": zod.string(),
+  "notes": zod.string().nullish(),
+  "loggedAt": zod.string()
+})
+export const ListWeightLogsResponse = zod.array(ListWeightLogsResponseItem)
+
+
+/**
+ * @summary Add a weight log entry
+ */
+export const CreateWeightLogBody = zod.object({
+  "weight": zod.number(),
+  "unit": zod.string().optional(),
+  "notes": zod.string().optional()
 })
 
 

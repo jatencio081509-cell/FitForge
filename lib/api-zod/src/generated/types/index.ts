@@ -8,6 +8,10 @@
 
 export * from './aiChatInput';
 export * from './aiGenerateWorkoutInput';
+export * from './aiSuggestExercisesInput';
+export * from './aiSuggestExercisesResult';
+export * from './aiWeightAdviceInput';
+export * from './aiWeightAdviceResult';
 export * from './coachReply';
 export * from './exercise';
 export * from './exerciseInput';
@@ -19,6 +23,8 @@ export * from './progressSummary';
 export * from './userProfile';
 export * from './userProfileUpdate';
 export * from './weeklyActivity';
+export * from './weightLogEntry';
+export * from './weightLogInput';
 export * from './workout';
 export * from './workoutDetail';
 export * from './workoutExercise';

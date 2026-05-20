@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface WeeklyActivity {
-  week: string;
-  workoutCount: number;
-  totalMinutes: number;
-  totalVolume: number;
+export interface WeightLogInput {
+  weight: number;
+  unit?: string;
+  notes?: string;
 }

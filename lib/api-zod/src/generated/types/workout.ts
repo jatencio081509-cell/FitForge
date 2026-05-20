@@ -11,7 +11,6 @@ export interface Workout {
   name: string;
   /** @nullable */
   description?: string | null;
-  /** beginner, intermediate, advanced */
   difficulty: string;
   estimatedMinutes: number;
   /** @nullable */

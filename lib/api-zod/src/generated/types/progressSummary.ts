@@ -9,10 +9,8 @@
 export interface ProgressSummary {
   totalWorkouts: number;
   totalMinutes: number;
-  /** consecutive days with a workout */
   currentStreak: number;
   longestStreak: number;
-  /** total weight lifted (kg) */
   totalVolume: number;
   workoutsThisWeek: number;
   workoutsThisMonth: number;

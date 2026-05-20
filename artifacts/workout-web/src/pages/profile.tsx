@@ -1,5 +1,8 @@
 import { AppLayout } from "@/components/layout";
-import { useGetProfile, getGetProfileQueryKey, useUpdateProfile } from "@workspace/api-client-react";
+import {
+  useGetProfile, getGetProfileQueryKey, useUpdateProfile,
+  useListWeightLogs, useCreateWeightLog, useAiWeightAdvice,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,8 +10,177 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, UserCircle } from "lucide-react";
+import { Save, UserCircle, Target, Scale, Cpu, TrendingDown, TrendingUp, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+function WeightGoalPanel() {
+  const { data: profile } = useGetProfile();
+  const { data: weightLogs } = useListWeightLogs();
+  const createWeightLog = useCreateWeightLog();
+  const updateProfile = useUpdateProfile();
+  const aiWeightAdvice = useAiWeightAdvice();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [newWeight, setNewWeight] = useState("");
+  const [newGoal, setNewGoal] = useState("");
+  const [advice, setAdvice] = useState<string | null>(null);
+
+  const unit = profile?.weightUnit ?? "kg";
+  const currentWeight = weightLogs?.[0]?.weight ?? profile?.weight;
+  const goalWeight = profile?.weightGoal;
+  const diff = currentWeight && goalWeight ? goalWeight - currentWeight : null;
+
+  const handleLogWeight = async () => {
+    const w = parseFloat(newWeight);
+    if (isNaN(w)) return;
+    await createWeightLog.mutateAsync({ data: { weight: w, unit } });
+    await updateProfile.mutateAsync({ data: { weight: w } });
+    queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+    setNewWeight("");
+    toast({ title: `Weight logged: ${w}${unit}` });
+  };
+
+  const handleSetGoal = async () => {
+    const g = parseFloat(newGoal);
+    if (isNaN(g)) return;
+    await updateProfile.mutateAsync({ data: { weightGoal: g } });
+    queryClient.invalidateQueries({ queryKey: getGetProfileQueryKey() });
+    setNewGoal("");
+    toast({ title: `Weight goal set: ${g}${unit}` });
+  };
+
+  const handleAiAdvice = async () => {
+    if (!currentWeight || !goalWeight || !profile) return;
+    const res = await aiWeightAdvice.mutateAsync({
+      data: {
+        currentWeight,
+        goalWeight,
+        unit,
+        fitnessGoal: profile.fitnessGoal,
+        fitnessLevel: profile.fitnessLevel,
+        weeklyWorkouts: profile.weeklyWorkoutTarget,
+      },
+    });
+    setAdvice(res.advice);
+  };
+
+  return (
+    <Card className="bg-card/50 border-border overflow-hidden">
+      <div className="h-1 bg-gradient-to-r from-primary/80 to-primary/20" />
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Scale className="w-5 h-5 text-primary" />
+          Weight Goal Tracker
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Current stats */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-background border border-border text-center">
+            <p className="text-xs text-muted-foreground mb-1">Current</p>
+            <p className="text-2xl font-bold text-foreground">{currentWeight ? `${currentWeight}` : "—"}</p>
+            <p className="text-xs text-muted-foreground">{unit}</p>
+          </div>
+          <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-center">
+            <p className="text-xs text-muted-foreground mb-1">Goal</p>
+            <p className="text-2xl font-bold text-primary">{goalWeight ? `${goalWeight}` : "—"}</p>
+            <p className="text-xs text-muted-foreground">{unit}</p>
+          </div>
+          <div className="p-4 rounded-xl bg-background border border-border text-center">
+            <p className="text-xs text-muted-foreground mb-1">To Go</p>
+            {diff !== null ? (
+              <div className="flex items-center justify-center gap-1">
+                {diff < 0 ? <TrendingDown className="w-4 h-4 text-green-500" /> : <TrendingUp className="w-4 h-4 text-yellow-500" />}
+                <p className="text-2xl font-bold" style={{ color: diff < 0 ? "#22c55e" : "#f59e0b" }}>
+                  {Math.abs(diff).toFixed(1)}
+                </p>
+              </div>
+            ) : <p className="text-2xl font-bold text-muted-foreground">—</p>}
+            <p className="text-xs text-muted-foreground">{unit}</p>
+          </div>
+        </div>
+
+        {/* Log weight */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm">Log Today's Weight ({unit})</Label>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                step="0.1"
+                placeholder={`e.g. 75.5`}
+                value={newWeight}
+                onChange={e => setNewWeight(e.target.value)}
+                className="bg-background"
+              />
+              <Button onClick={handleLogWeight} disabled={createWeightLog.isPending || !newWeight} variant="outline">
+                {createWeightLog.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scale className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm">Set Weight Goal ({unit})</Label>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                step="0.1"
+                placeholder={`e.g. 70.0`}
+                value={newGoal}
+                onChange={e => setNewGoal(e.target.value)}
+                className="bg-background"
+              />
+              <Button onClick={handleSetGoal} disabled={updateProfile.isPending || !newGoal} variant="outline">
+                {updateProfile.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Weight history */}
+        {weightLogs && weightLogs.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">Recent Entries</Label>
+            <div className="flex flex-wrap gap-2">
+              {weightLogs.slice(0, 8).map((log) => (
+                <div key={log.id} className="px-3 py-1.5 rounded-lg bg-background border border-border text-sm">
+                  <span className="font-semibold text-foreground">{log.weight}{unit}</span>
+                  <span className="text-muted-foreground ml-2 text-xs">
+                    {new Date(log.loggedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AI advice */}
+        {currentWeight && goalWeight && (
+          <div className="space-y-3">
+            <Button
+              onClick={handleAiAdvice}
+              disabled={aiWeightAdvice.isPending}
+              className="w-full gap-2"
+              variant="outline"
+            >
+              <Cpu className="w-4 h-4 text-primary" />
+              {aiWeightAdvice.isPending ? "Getting AI Plan..." : "Get AI Weight Plan"}
+            </Button>
+            {advice && (
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2">
+                <div className="flex items-center gap-2 text-primary text-sm font-semibold">
+                  <Cpu className="w-4 h-4" />
+                  AI Coach Plan
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{advice}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Profile() {
   const { data: profile, isLoading } = useGetProfile({ query: { queryKey: getGetProfileQueryKey() } });
@@ -22,7 +194,8 @@ export default function Profile() {
     weight: "",
     height: "",
     fitnessGoal: "general_fitness",
-    fitnessLevel: "beginner"
+    fitnessLevel: "beginner",
+    weeklyWorkoutTarget: "3",
   });
 
   const initialized = useRef(false);
@@ -35,7 +208,8 @@ export default function Profile() {
         weight: profile.weight?.toString() || "",
         height: profile.height?.toString() || "",
         fitnessGoal: profile.fitnessGoal || "general_fitness",
-        fitnessLevel: profile.fitnessLevel || "beginner"
+        fitnessLevel: profile.fitnessLevel || "beginner",
+        weeklyWorkoutTarget: profile.weeklyWorkoutTarget?.toString() || "3",
       });
       initialized.current = true;
     }
@@ -50,7 +224,8 @@ export default function Profile() {
         weight: formData.weight ? Number(formData.weight) : undefined,
         height: formData.height ? Number(formData.height) : undefined,
         fitnessGoal: formData.fitnessGoal,
-        fitnessLevel: formData.fitnessLevel
+        fitnessLevel: formData.fitnessLevel,
+        weeklyWorkoutTarget: formData.weeklyWorkoutTarget ? Number(formData.weeklyWorkoutTarget) : undefined,
       }
     }, {
       onSuccess: () => {
@@ -69,6 +244,9 @@ export default function Profile() {
           <h1 className="text-4xl font-bold tracking-tight mb-2">Profile & Goals</h1>
           <p className="text-muted-foreground text-lg">Tune your metrics to improve AI recommendations.</p>
         </div>
+
+        {/* Weight goal tracker */}
+        <WeightGoalPanel />
 
         <Card className="bg-card/50 backdrop-blur border-border overflow-hidden">
           <div className="h-32 bg-gradient-to-r from-primary/20 to-accent/20" />
@@ -89,7 +267,7 @@ export default function Profile() {
                 </div>
                 <div className="space-y-2">
                   <Label>Weight (kg)</Label>
-                  <Input type="number" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} className="bg-background" />
+                  <Input type="number" step="0.1" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} className="bg-background" />
                 </div>
                 <div className="space-y-2">
                   <Label>Height (cm)</Label>
@@ -121,6 +299,15 @@ export default function Profile() {
                         <SelectItem value="beginner">Beginner</SelectItem>
                         <SelectItem value="intermediate">Intermediate</SelectItem>
                         <SelectItem value="advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Weekly Workout Target</Label>
+                    <Select value={formData.weeklyWorkoutTarget} onValueChange={v => setFormData({...formData, weeklyWorkoutTarget: v})}>
+                      <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5,6,7].map(n => <SelectItem key={n} value={String(n)}>{n} day{n > 1 ? "s" : ""}/week</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

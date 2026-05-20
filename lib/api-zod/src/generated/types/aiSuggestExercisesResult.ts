@@ -5,10 +5,9 @@
  * FitForge AI Workout App API
  * OpenAPI spec version: 0.1.0
  */
+import type { Exercise } from './exercise';
 
-export interface WeeklyActivity {
-  week: string;
-  workoutCount: number;
-  totalMinutes: number;
-  totalVolume: number;
+export interface AiSuggestExercisesResult {
+  exercises: Exercise[];
+  explanation: string;
 }

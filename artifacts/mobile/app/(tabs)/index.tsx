@@ -1,5 +1,7 @@
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import React from "react";
 import {
   ActivityIndicator,
@@ -19,21 +21,18 @@ import {
   useListWorkouts,
 } from "@workspace/api-client-react";
 
-function StatCard({
-  label,
-  value,
-  icon,
-  colors,
-}: {
-  label: string;
-  value: string | number;
-  icon: string;
-  colors: ReturnType<typeof useColors>;
+const MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "arms", "core"];
+
+function StatCard({ label, value, icon, colors, accent = false }: {
+  label: string; value: string | number; icon: string;
+  colors: ReturnType<typeof useColors>; accent?: boolean;
 }) {
   return (
-    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Feather name={icon as never} size={18} color={colors.primary} />
-      <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Outfit_700Bold" }]}>
+    <View style={[styles.statCard, { backgroundColor: accent ? colors.primary + "15" : colors.card, borderColor: accent ? colors.primary + "40" : colors.border }]}>
+      <View style={[styles.statIconBg, { backgroundColor: accent ? colors.primary + "25" : colors.muted }]}>
+        <Feather name={icon as never} size={15} color={accent ? colors.primary : colors.mutedForeground} />
+      </View>
+      <Text style={[styles.statValue, { color: accent ? colors.primary : colors.foreground, fontFamily: "Outfit_700Bold" }]}>
         {value}
       </Text>
       <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
@@ -55,127 +54,198 @@ export default function HomeScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 83;
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   const todayDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
+    weekday: "long", month: "long", day: "numeric",
   });
+
+  const weekTarget = 4;
+  const weekDone = summary?.workoutsThisWeek ?? 0;
+  const weekProgress = Math.min(weekDone / weekTarget, 1);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingTop: topPadding + 16,
-          paddingBottom: bottomPadding + 16,
-          paddingHorizontal: 20,
-        }}
+        contentContainerStyle={{ paddingBottom: bottomPadding + 16 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
-              {todayDate}
-            </Text>
-            <Text style={[styles.title, { color: colors.foreground, fontFamily: "Outfit_700Bold" }]}>
-              FitForge
-            </Text>
+        {/* Hero Header */}
+        <LinearGradient
+          colors={[colors.primary + "22", colors.primary + "06", "transparent"]}
+          style={[styles.heroGradient, { paddingTop: topPadding + 20 }]}
+        >
+          <View style={styles.heroTop}>
+            <View>
+              <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+                {greeting} 👋
+              </Text>
+              <Text style={[styles.heroTitle, { color: colors.foreground, fontFamily: "Outfit_700Bold" }]}>
+                FitForge
+              </Text>
+              <Text style={[styles.heroDate, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+                {todayDate}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+              style={[styles.streakPill, { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }]}
+            >
+              <Feather name="zap" size={14} color="#000" />
+              <Text style={[styles.streakText, { fontFamily: "Outfit_700Bold" }]}>
+                {summary?.currentStreak ?? 0}d
+              </Text>
+            </Pressable>
           </View>
-          <View style={[styles.streakBadge, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}>
-            <Feather name="zap" size={14} color={colors.primary} />
-            <Text style={[styles.streakText, { color: colors.primary, fontFamily: "Outfit_600SemiBold" }]}>
-              {summary?.currentStreak ?? 0} day streak
-            </Text>
-          </View>
-        </View>
 
-        {/* Stats */}
-        {summaryLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
-        ) : (
-          <View style={styles.statsGrid}>
-            <StatCard label="Workouts" value={summary?.totalWorkouts ?? 0} icon="activity" colors={colors} />
-            <StatCard label="This Week" value={summary?.workoutsThisWeek ?? 0} icon="calendar" colors={colors} />
-            <StatCard label="Hours" value={Math.round((summary?.totalMinutes ?? 0) / 60)} icon="clock" colors={colors} />
-            <StatCard label="Volume (kg)" value={Math.round(summary?.totalVolume ?? 0)} icon="trending-up" colors={colors} />
+          {/* Weekly Goal Progress */}
+          <View style={[styles.weekGoalCard, { backgroundColor: colors.card + "CC", borderColor: colors.border }]}>
+            <View style={styles.weekGoalHeader}>
+              <Text style={[styles.weekGoalLabel, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
+                Weekly Goal
+              </Text>
+              <Text style={[styles.weekGoalCount, { color: colors.primary, fontFamily: "Outfit_700Bold" }]}>
+                {weekDone} / {weekTarget}
+              </Text>
+            </View>
+            <View style={[styles.progressTrack, { backgroundColor: colors.muted }]}>
+              <LinearGradient
+                colors={[colors.primary, colors.primary + "99"]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={[styles.progressFill, { width: `${weekProgress * 100}%` as never }]}
+              />
+            </View>
+            <Text style={[styles.weekGoalSub, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+              {weekTarget - weekDone > 0 ? `${weekTarget - weekDone} more to hit your weekly target` : "Weekly goal achieved! 🎉"}
+            </Text>
           </View>
-        )}
+        </LinearGradient>
 
-        {/* Quick Start */}
-        {workouts && workouts.length > 0 && (
+        <View style={styles.content}>
+          {/* Stats Grid */}
+          {summaryLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
+          ) : (
+            <View style={styles.statsGrid}>
+              <StatCard label="Workouts" value={summary?.totalWorkouts ?? 0} icon="activity" colors={colors} accent />
+              <StatCard label="This Week" value={weekDone} icon="calendar" colors={colors} />
+              <StatCard label="Hours" value={Math.round((summary?.totalMinutes ?? 0) / 60)} icon="clock" colors={colors} />
+              <StatCard label="Streak" value={`${summary?.currentStreak ?? 0}d`} icon="zap" colors={colors} accent />
+            </View>
+          )}
+
+          {/* Muscle Explorer */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
-              Quick Start
+              Train by Muscle
             </Text>
-            {workouts.slice(0, 3).map((w) => (
-              <Pressable
-                key={w.id}
-                style={({ pressed }) => [
-                  styles.workoutCard,
-                  { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.75 : 1 },
-                ]}
-                onPress={() => router.push(`/workout/${w.id}` as never)}
-              >
-                <View>
-                  <Text style={[styles.workoutName, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
-                    {w.name}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+              {MUSCLE_GROUPS.map((mg) => (
+                <Pressable
+                  key={mg}
+                  style={({ pressed }) => [styles.muscleChip, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    router.push(`/muscle/${mg}` as never);
+                  }}
+                >
+                  <Text style={[styles.muscleEmoji]}>
+                    {mg === "chest" ? "💪" : mg === "back" ? "🦾" : mg === "legs" ? "🦵" : mg === "shoulders" ? "🏋️" : mg === "arms" ? "💪" : "🔥"}
                   </Text>
-                  <Text style={[styles.workoutMeta, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
-                    {w.estimatedMinutes} min · {w.difficulty}
+                  <Text style={[styles.muscleChipText, { color: colors.foreground, fontFamily: "Outfit_500Medium" }]}>
+                    {mg.charAt(0).toUpperCase() + mg.slice(1)}
                   </Text>
-                </View>
-                <View style={[styles.startBtn, { backgroundColor: colors.primary }]}>
-                  <Feather name="play" size={14} color={colors.primaryForeground} />
-                </View>
-              </Pressable>
-            ))}
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
-        )}
 
-        {/* Recent Activity */}
-        {recentLogs && recentLogs.length > 0 && (
+          {/* Quick Start Workouts */}
+          {workouts && workouts.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
+                  Quick Start
+                </Text>
+                <Pressable onPress={() => router.push("/(tabs)/workouts" as never)}>
+                  <Text style={[styles.seeAll, { color: colors.primary, fontFamily: "Outfit_500Medium" }]}>See all</Text>
+                </Pressable>
+              </View>
+              {workouts.slice(0, 3).map((w) => (
+                <Pressable
+                  key={w.id}
+                  style={({ pressed }) => [styles.workoutCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push(`/workout/${w.id}` as never);
+                  }}
+                >
+                  <LinearGradient
+                    colors={[colors.primary + "18", "transparent"]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.workoutCardGrad}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.workoutName, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
+                      {w.name}
+                    </Text>
+                    <Text style={[styles.workoutMeta, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+                      {w.estimatedMinutes} min · {w.difficulty} · {w.exerciseCount ?? "?"} exercises
+                    </Text>
+                  </View>
+                  <View style={[styles.startBtn, { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }]}>
+                    <Feather name="play" size={14} color="#000" />
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {/* Recent Activity */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
               Recent Activity
             </Text>
-            {recentLogs.map((log) => (
-              <View
-                key={log.id}
-                style={[styles.logCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
-                <View style={[styles.logIcon, { backgroundColor: colors.primary + "20" }]}>
-                  <Feather name="check-circle" size={18} color={colors.primary} />
+            {recentLogs && recentLogs.length > 0 ? (
+              recentLogs.map((log) => (
+                <View key={log.id} style={[styles.logCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={[styles.logDot, { backgroundColor: colors.primary }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.logName, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
+                      {log.workoutName}
+                    </Text>
+                    <Text style={[styles.logMeta, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+                      {new Date(log.completedAt).toLocaleDateString()} · {log.durationMinutes} min
+                    </Text>
+                  </View>
+                  {log.rating != null && (
+                    <Text style={[styles.stars, { color: colors.primary }]}>{"★".repeat(log.rating)}</Text>
+                  )}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.logName, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
-                    {log.workoutName}
-                  </Text>
-                  <Text style={[styles.logMeta, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
-                    {new Date(log.completedAt).toLocaleDateString()} · {log.durationMinutes} min
-                  </Text>
-                </View>
-                {log.rating != null && (
-                  <Text style={{ color: colors.primary, fontFamily: "Outfit_600SemiBold" }}>
-                    {"★".repeat(log.rating)}
-                  </Text>
-                )}
+              ))
+            ) : (
+              <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <LinearGradient colors={[colors.primary + "20", colors.primary + "05"]} style={styles.emptyIconBg}>
+                  <Feather name="activity" size={28} color={colors.primary} />
+                </LinearGradient>
+                <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
+                  No workouts yet
+                </Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
+                  Log your first workout to start tracking progress
+                </Text>
+                <Pressable
+                  style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => router.push("/(tabs)/workouts" as never)}
+                >
+                  <Text style={[styles.emptyBtnText, { fontFamily: "Outfit_600SemiBold" }]}>Browse Workouts</Text>
+                </Pressable>
               </View>
-            ))}
+            )}
           </View>
-        )}
-
-        {recentLogs?.length === 0 && (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="activity" size={32} color={colors.mutedForeground} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground, fontFamily: "Outfit_600SemiBold" }]}>
-              No workouts yet
-            </Text>
-            <Text style={[styles.emptyText, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
-              Log your first workout to start tracking progress
-            </Text>
-          </View>
-        )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -183,26 +253,47 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 },
-  greeting: { fontSize: 13 },
-  title: { fontSize: 30, marginTop: 2 },
-  streakBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  streakText: { fontSize: 13 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 28 },
-  statCard: { flex: 1, minWidth: "45%", borderRadius: 14, borderWidth: 1, padding: 16, gap: 6, alignItems: "flex-start" },
-  statValue: { fontSize: 24 },
+  heroGradient: { paddingHorizontal: 20, paddingBottom: 24 },
+  heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
+  greeting: { fontSize: 14, marginBottom: 2 },
+  heroTitle: { fontSize: 34, lineHeight: 40 },
+  heroDate: { fontSize: 13, marginTop: 4 },
+  streakPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 24 },
+  streakText: { fontSize: 14, color: "#000" },
+  weekGoalCard: { borderRadius: 18, borderWidth: 1, padding: 18 },
+  weekGoalHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
+  weekGoalLabel: { fontSize: 15 },
+  weekGoalCount: { fontSize: 15 },
+  progressTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
+  progressFill: { height: 8, borderRadius: 4 },
+  weekGoalSub: { fontSize: 12, marginTop: 8 },
+  content: { paddingHorizontal: 20 },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 20, marginBottom: 28 },
+  statCard: { flex: 1, minWidth: "45%", borderRadius: 16, borderWidth: 1, padding: 16, gap: 8 },
+  statIconBg: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  statValue: { fontSize: 26, lineHeight: 30 },
   statLabel: { fontSize: 12 },
   section: { marginBottom: 28 },
-  sectionTitle: { fontSize: 17, marginBottom: 12 },
-  workoutCard: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 10 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: { fontSize: 17 },
+  seeAll: { fontSize: 13 },
+  muscleChip: { alignItems: "center", borderRadius: 16, borderWidth: 1, padding: 14, minWidth: 80, gap: 6 },
+  muscleEmoji: { fontSize: 22 },
+  muscleChipText: { fontSize: 12 },
+  workoutCard: { flexDirection: "row", alignItems: "center", borderRadius: 16, borderWidth: 1, overflow: "hidden", padding: 16, marginBottom: 10 },
+  workoutCardGrad: { ...StyleSheet.absoluteFillObject },
   workoutName: { fontSize: 15 },
-  workoutMeta: { fontSize: 13, marginTop: 2 },
-  startBtn: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  workoutMeta: { fontSize: 12, marginTop: 3 },
+  startBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   logCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 10 },
-  logIcon: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  logDot: { width: 10, height: 10, borderRadius: 5 },
   logName: { fontSize: 14 },
   logMeta: { fontSize: 12, marginTop: 2 },
-  emptyCard: { borderRadius: 18, borderWidth: 1, padding: 32, alignItems: "center", gap: 10, marginTop: 12 },
-  emptyTitle: { fontSize: 16 },
-  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
+  stars: { fontSize: 13 },
+  emptyCard: { borderRadius: 20, borderWidth: 1, padding: 32, alignItems: "center", gap: 12 },
+  emptyIconBg: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontSize: 17 },
+  emptyText: { fontSize: 13, textAlign: "center", lineHeight: 20, maxWidth: 240 },
+  emptyBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24, marginTop: 4 },
+  emptyBtnText: { fontSize: 14, color: "#000" },
 });
