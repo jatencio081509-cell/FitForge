@@ -13,8 +13,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { setBaseUrl } from "@workspace/api-client-react";
+import { Platform } from "react-native";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { requestNotificationPermissions, scheduleDailyWorkoutReminder } from "@/hooks/useNotifications";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
@@ -47,6 +49,16 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      requestNotificationPermissions().then((granted) => {
+        if (granted) {
+          scheduleDailyWorkoutReminder(8, 0);
+        }
+      });
+    }
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 

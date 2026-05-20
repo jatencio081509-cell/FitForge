@@ -13,9 +13,9 @@ import {
 } from "@workspace/api-zod";
 import { serializeDates } from "../lib/serialize";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL ?? "https://openrouter.ai/api/v1",
+const openrouter = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY ?? "dummy",
+  baseURL: process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
 });
 
 const MODEL = "openai/gpt-4o-mini";
@@ -40,9 +40,9 @@ router.post("/ai/chat", async (req, res): Promise<void> => {
 
 Be concise, practical, and encouraging. Use scientific backing where relevant. Keep responses under 300 words unless a detailed breakdown is needed.${context ? `\n\nUser context: ${context}` : ""}`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await openrouter.chat.completions.create({
     model: MODEL,
-    max_tokens: 512,
+    max_tokens: 8192,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: message },
@@ -86,9 +86,9 @@ Respond ONLY with valid JSON (no markdown):
   ]
 }`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await openrouter.chat.completions.create({
     model: MODEL,
-    max_tokens: 1024,
+    max_tokens: 8192,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -153,9 +153,9 @@ ${exerciseList}
 Return the top 5-8 most relevant exercise IDs as JSON array only (no markdown):
 { "exerciseIds": [1, 2, 3], "explanation": "Brief reason why these exercises are ideal" }`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await openrouter.chat.completions.create({
     model: MODEL,
-    max_tokens: 512,
+    max_tokens: 8192,
     messages: [{ role: "user", content: prompt }],
   });
 
@@ -198,9 +198,9 @@ Give a concise, actionable 3-part plan (max 250 words):
 
 Be specific with numbers. Be encouraging but realistic.`;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await openrouter.chat.completions.create({
     model: MODEL,
-    max_tokens: 512,
+    max_tokens: 8192,
     messages: [
       { role: "system", content: "You are FitForge, a science-backed AI fitness coach." },
       { role: "user", content: prompt },
