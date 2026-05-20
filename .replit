@@ -37,3 +37,8 @@ externalPort = 80
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+OPENAI_BASE_URL = "https://openrouter.ai/api/v1"
