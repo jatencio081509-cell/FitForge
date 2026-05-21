@@ -1,0 +1,81 @@
+#2 - Exercise Details, Weight Tracking & Volume
+What & Why
+Exercises need to display their descriptions and step-by-step instructions in the UI. The workout logger already stores weight per set but the UI and PR system need improvement: users should be able to clearly input weight per set, see total volume calculated in real time, and have PRs tracked by weight lifted (heaviest single set) as well as by volume (total session volume per exercise). The seed data already has instructions but they aren't prominently shown.
+Done looks like
+Exercise detail view (web + mobile) shows full description, step-by-step instructions, primary and secondary muscles worked, and equipment needed
+Workout logger shows a clear weight input per set alongside reps, with a running total volume display (sets × reps × weight)
+PR system tracks both "heaviest set" and "best total volume in one session" per exercise
+The progress page shows both PR types and volume trends per exercise
+Exercises list/search shows a muscle group tag and equipment badge
+Out of scope
+Video demonstrations (images/text only)
+Custom exercise categories beyond what's seeded
+RPE or 1RM estimation
+Steps
+Exercise detail page (web) — Build or expand the exercise detail modal/page to show description, numbered instructions, muscles worked chips, and equipment badge.
+Exercise detail screen (mobile) — Mirror the detail view in the Expo app with the same information laid out for a phone screen.
+Weight input in workout logger — Ensure each set row in log-workout.tsx has a weight field (lbs/kg), a reps field, and shows the per-set volume. Add a session total-volume line at the bottom of each exercise card.
+PR system update — Update the progress API and frontend to track and display "best weight" (heaviest single set) and "best volume" (total volume in one session) as separate PR categories per exercise.
+Seed data check — Confirm all seeded exercises have non-empty instructions; add any missing descriptions for the most common exercises.
+Relevant files
+lib/db/src/seed.ts
+lib/db/src/schema/exercises.ts
+artifacts/workout-web/src/pages/log-workout.tsx
+artifacts/workout-web/src/pages/progress.tsx
+artifacts/api-server/src/routes/progress.ts
+artifacts/api-server/src/routes/exercises.ts
+artifacts/mobile/app/(tabs)/workouts.tsx
+#3 - Real 3D Human Body Model
+What & Why
+The current "3D" body model is an SVG that flips 180° to show front/back — it's flat and unconvincing. Replace it with a true interactive 3D human mesh rendered with Three.js (via @react-three/fiber + @react-three/drei) that users can rotate freely and that highlights muscles in real time as they select exercises.
+Done looks like
+A 3D human figure renders on the exercise and progress pages (web), built with react-three/fiber
+The model can be orbited/rotated with mouse drag (OrbitControls)
+Muscle groups light up with the brand's electric cyan (#00E6D2) when an exercise targets them
+Front and back of the body are simultaneously visible as the user rotates
+The mobile app also shows a simplified 3D model or at minimum the improved SVG highlight view
+Out of scope
+Photorealistic skin textures
+Animated exercise demonstrations
+Skeletal rig / bone animations
+Steps
+Install Three.js packages — Add @react-three/fiber, @react-three/drei, and three to the web app's dependencies.
+3D model asset — Use a low-poly human body GLB/GLTF mesh (open-source, e.g. from Sketchfab CC0 or a procedurally generated one with separate muscle-group meshes). Store it in attached_assets/ or fetch from a CDN. Each major muscle group should be a named mesh so it can be highlighted independently.
+MuscleModel3D component — Build a React Three Fiber component that loads the GLB, maps muscle group names to mesh names, accepts a highlightedMuscles prop (string[]), and colors highlighted meshes with the cyan accent while keeping others at a neutral dark tone. Wrap in a <Canvas> with OrbitControls and Environment lighting.
+Wire into exercise and progress pages — Replace muscle-figure-3d.tsx usages with the new component; pass the relevant muscle groups from the selected exercise or workout.
+Mobile fallback — Keep the existing SVG highlight component on mobile (Three.js WebGL isn't reliable in Expo WebView); improve its styling to match the new design.
+Relevant files
+artifacts/workout-web/src/components/muscle-figure-3d.tsx
+artifacts/mobile/components/MuscleFigure.tsx
+artifacts/workout-web/src/pages/progress.tsx
+artifacts/workout-web/package.json
+#4 - UI/UX Overhaul — Web, Mobile & Calendar
+What & Why
+The app needs a significant visual polish pass. The web app has layout/overflow issues and some pages don't fit the screen well. The mobile app needs better spacing, typography, and touch targets. The calendar on the progress page is a heatmap grid rather than a real calendar, which isn't intuitive for planning or reviewing workouts.
+Done looks like
+Web app: all pages fit within the viewport without horizontal scroll; cards, modals, and tables are properly spaced and legible
+A real month-view calendar on the Progress page shows each day as a cell; days with workouts are highlighted with the cyan accent; clicking a day shows the workout logged that day
+Mobile app: all tab screens use proper safe-area insets and fit phone screens without cut-off or overflow; font sizes, line heights, and padding are comfortable for thumb navigation
+Consistent visual hierarchy across web and mobile: headings, body text, and accent colors follow the dark-first design system (obsidian black + electric cyan)
+Navigation and tab bars are clearly styled and easy to tap/click
+Out of scope
+Dark/light mode toggle (app is dark-first only)
+Animations or transitions beyond simple hover/active states
+Redesigning the AI chat interface
+Steps
+Web layout fixes — Audit and fix any page that overflows or doesn't fit the viewport; ensure the sidebar/top nav doesn't compete with page content on smaller screens.
+Real calendar component (web) — Replace or augment the heatmap with a proper react-day-picker-based month-view calendar that shows workout dots on days; selecting a day opens a summary panel for that workout.
+Progress page calendar integration — Wire the calendar to the existing workout-log data so it fetches logs by date range and marks completed workout days.
+Mobile screen layout — Go through each tab (Dashboard, Workouts, Progress, AI Coach, Profile) and fix padding, safe-area gaps, text truncation, and any elements that don't fit phone-sized screens.
+Mobile typography and cards — Improve card styles, font weights, and button sizes across the mobile app to feel polished and intentional.
+Web card and table polish — Tighten the visual design of exercise cards, workout log entries, and data tables on the web app for a cleaner, more professional look.
+Relevant files
+artifacts/workout-web/src/pages/progress.tsx
+artifacts/workout-web/src/components/ui/calendar.tsx
+artifacts/workout-web/src/pages/dashboard.tsx
+artifacts/workout-web/src/App.tsx
+artifacts/mobile/app/(tabs)/index.tsx
+artifacts/mobile/app/(tabs)/workouts.tsx
+artifacts/mobile/app/(tabs)/progress.tsx
+artifacts/mobile/constants/colors.ts
+
