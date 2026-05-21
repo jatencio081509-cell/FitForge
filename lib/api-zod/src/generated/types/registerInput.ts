@@ -6,10 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface WorkoutUpdate {
+export interface RegisterInput {
   name?: string;
-  description?: string;
-  difficulty?: string;
-  estimatedMinutes?: number;
-  category?: string;
+  email: string;
+  password: string;
 }

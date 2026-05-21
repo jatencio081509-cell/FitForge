@@ -36,7 +36,11 @@ export default function Exercises() {
     if (!confirm("Delete this exercise? This cannot be undone.")) return;
     setDeletingId(id);
     try {
-      await fetch(`/api/exercises/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem("fitforge_token");
+      await fetch(`/api/exercises/${id}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       queryClient.invalidateQueries({ queryKey: getListExercisesQueryKey() });
     } finally {
       setDeletingId(null);

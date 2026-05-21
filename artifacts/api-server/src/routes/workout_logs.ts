@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, workoutLogsTable, workoutLogSetsTable, exercisesTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
+import { requireAuth } from "../middleware/auth";
 import {
   ListWorkoutLogsQueryParams,
   ListWorkoutLogsResponse,
@@ -14,20 +15,21 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/workout-logs", async (req, res): Promise<void> => {
+router.get("/workout-logs", requireAuth, async (req, res): Promise<void> => {
   const query = ListWorkoutLogsQueryParams.safeParse(req.query);
-  const limit = query.success && query.data.limit ? query.data.limit : 20;
+  const limit = query.success && query.data.limit ? query.data.limit : 50;
 
   const logs = await db
     .select()
     .from(workoutLogsTable)
+    .where(eq(workoutLogsTable.userId, req.userId!))
     .orderBy(workoutLogsTable.completedAt)
     .limit(limit);
 
   res.json(ListWorkoutLogsResponse.parse(serializeDates(logs)));
 });
 
-router.post("/workout-logs", async (req, res): Promise<void> => {
+router.post("/workout-logs", requireAuth, async (req, res): Promise<void> => {
   const parsed = CreateWorkoutLogBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -36,7 +38,6 @@ router.post("/workout-logs", async (req, res): Promise<void> => {
 
   const { sets, ...logData } = parsed.data;
 
-  // Calculate total volume
   let totalVolume = 0;
   if (sets && sets.length > 0) {
     totalVolume = sets.reduce((sum, s) => sum + (s.reps * (s.weight ?? 0)), 0);
@@ -44,7 +45,7 @@ router.post("/workout-logs", async (req, res): Promise<void> => {
 
   const [log] = await db
     .insert(workoutLogsTable)
-    .values({ ...logData, totalVolume, completedAt: new Date(logData.completedAt) })
+    .values({ ...logData, userId: req.userId!, totalVolume, completedAt: new Date(logData.completedAt) })
     .returning();
 
   if (sets && sets.length > 0) {
@@ -63,7 +64,7 @@ router.post("/workout-logs", async (req, res): Promise<void> => {
   res.status(201).json(ListWorkoutLogsResponseItem.parse(serializeDates(log)));
 });
 
-router.get("/workout-logs/:id", async (req, res): Promise<void> => {
+router.get("/workout-logs/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetWorkoutLogParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -73,7 +74,7 @@ router.get("/workout-logs/:id", async (req, res): Promise<void> => {
   const [log] = await db
     .select()
     .from(workoutLogsTable)
-    .where(eq(workoutLogsTable.id, params.data.id));
+    .where(and(eq(workoutLogsTable.id, params.data.id), eq(workoutLogsTable.userId, req.userId!)));
 
   if (!log) {
     res.status(404).json({ error: "Workout log not found" });
@@ -98,7 +99,7 @@ router.get("/workout-logs/:id", async (req, res): Promise<void> => {
   res.json(GetWorkoutLogResponse.parse(serializeDates({ ...log, sets })));
 });
 
-router.delete("/workout-logs/:id", async (req, res): Promise<void> => {
+router.delete("/workout-logs/:id", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteWorkoutLogParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -107,7 +108,7 @@ router.delete("/workout-logs/:id", async (req, res): Promise<void> => {
 
   const [log] = await db
     .delete(workoutLogsTable)
-    .where(eq(workoutLogsTable.id, params.data.id))
+    .where(and(eq(workoutLogsTable.id, params.data.id), eq(workoutLogsTable.userId, req.userId!)))
     .returning();
 
   if (!log) {

@@ -9,6 +9,7 @@ import {
   ListExercisesResponse,
 } from "@workspace/api-zod";
 import { serializeDates } from "../lib/serialize";
+import { requireAuth } from "../middleware/auth";
 
 const router: IRouter = Router();
 
@@ -48,7 +49,7 @@ router.post("/exercises", async (req, res): Promise<void> => {
   res.status(201).json(GetExerciseResponse.parse(serializeDates(exercise)));
 });
 
-router.delete("/exercises/:id", async (req, res): Promise<void> => {
+router.delete("/exercises/:id", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid exercise id" });

@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, UserCircle, Target, Scale, TrendingDown, TrendingUp, Loader2 } from "lucide-react";
+import { Save, UserCircle, Target, Scale, TrendingDown, TrendingUp, Loader2, LogOut, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth";
+import { useLocation } from "wouter";
 
 function WeightGoalPanel() {
   const { data: profile } = useGetProfile();
@@ -148,6 +150,8 @@ export default function Profile() {
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user, logout } = useAuth();
+  const [, navigate] = useLocation();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -204,9 +208,20 @@ export default function Profile() {
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-8 pb-12">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Profile & Goals</h1>
-          <p className="text-muted-foreground text-lg">Track your body metrics and set your fitness goals.</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight mb-2">Profile & Goals</h1>
+            <p className="text-muted-foreground text-lg">Track your body metrics and set your fitness goals.</p>
+            {user && <p className="text-sm text-primary mt-1 font-medium">{user.email}</p>}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/settings")} className="gap-2">
+              <Settings className="w-4 h-4" /> Settings
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { logout(); navigate("/login"); }} className="gap-2 text-destructive border-destructive/40 hover:bg-destructive/10">
+              <LogOut className="w-4 h-4" /> Log Out
+            </Button>
+          </div>
         </div>
 
         {/* Weight goal tracker */}

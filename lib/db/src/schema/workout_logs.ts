@@ -3,9 +3,11 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { workoutsTable } from "./workouts";
 import { exercisesTable } from "./exercises";
+import { usersTable } from "./users";
 
 export const workoutLogsTable = pgTable("workout_logs", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
   workoutId: integer("workout_id").references(() => workoutsTable.id, { onDelete: "set null" }),
   workoutName: text("workout_name").notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),

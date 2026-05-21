@@ -2,9 +2,11 @@ import { pgTable, text, serial, timestamp, boolean, integer, real } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { exercisesTable } from "./exercises";
+import { usersTable } from "./users";
 
 export const workoutsTable = pgTable("workouts", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   difficulty: text("difficulty").notNull().default("beginner"),

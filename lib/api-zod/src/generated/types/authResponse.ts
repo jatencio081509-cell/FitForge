@@ -5,10 +5,9 @@
  * FitForge Workout App API
  * OpenAPI spec version: 0.1.0
  */
+import type { AuthUser } from './authUser';
 
-export interface WeeklyActivity {
-  week: string;
-  workoutCount: number;
-  totalMinutes: number;
-  totalVolume: number;
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
 }

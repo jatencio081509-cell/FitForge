@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { db, workoutsTable, workoutExercisesTable, exercisesTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
+import { requireAuth } from "../middleware/auth";
 import {
   ListWorkoutsResponse,
   ListWorkoutsResponseItem,
@@ -16,8 +17,12 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/workouts", async (_req, res): Promise<void> => {
-  const rows = await db.select().from(workoutsTable).orderBy(workoutsTable.createdAt);
+router.get("/workouts", requireAuth, async (req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(workoutsTable)
+    .where(sql`(${workoutsTable.userId} IS NULL OR ${workoutsTable.userId} = ${req.userId!})`)
+    .orderBy(workoutsTable.createdAt);
 
   const withCounts = await Promise.all(rows.map(async (w) => {
     const exerciseRows = await db
@@ -30,7 +35,7 @@ router.get("/workouts", async (_req, res): Promise<void> => {
   res.json(ListWorkoutsResponse.parse(serializeDates(withCounts)));
 });
 
-router.post("/workouts", async (req, res): Promise<void> => {
+router.post("/workouts", requireAuth, async (req, res): Promise<void> => {
   const parsed = CreateWorkoutBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -41,7 +46,7 @@ router.post("/workouts", async (req, res): Promise<void> => {
 
   const [workout] = await db
     .insert(workoutsTable)
-    .values(workoutData)
+    .values({ ...workoutData, userId: req.userId! })
     .returning();
 
   if (exerciseInputs && exerciseInputs.length > 0) {
@@ -63,7 +68,7 @@ router.post("/workouts", async (req, res): Promise<void> => {
   res.status(201).json(ListWorkoutsResponseItem.parse(serializeDates({ ...workout, exerciseCount })));
 });
 
-router.get("/workouts/:id", async (req, res): Promise<void> => {
+router.get("/workouts/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetWorkoutParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -73,7 +78,7 @@ router.get("/workouts/:id", async (req, res): Promise<void> => {
   const [workout] = await db
     .select()
     .from(workoutsTable)
-    .where(eq(workoutsTable.id, params.data.id));
+    .where(and(eq(workoutsTable.id, params.data.id), eq(workoutsTable.userId, req.userId!)));
 
   if (!workout) {
     res.status(404).json({ error: "Workout not found" });
@@ -102,7 +107,7 @@ router.get("/workouts/:id", async (req, res): Promise<void> => {
   res.json(GetWorkoutResponse.parse(serializeDates({ ...workout, exercises: exerciseRows })));
 });
 
-router.patch("/workouts/:id", async (req, res): Promise<void> => {
+router.patch("/workouts/:id", requireAuth, async (req, res): Promise<void> => {
   const params = UpdateWorkoutParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -118,7 +123,7 @@ router.patch("/workouts/:id", async (req, res): Promise<void> => {
   const [workout] = await db
     .update(workoutsTable)
     .set(parsed.data)
-    .where(eq(workoutsTable.id, params.data.id))
+    .where(and(eq(workoutsTable.id, params.data.id), eq(workoutsTable.userId, req.userId!)))
     .returning();
 
   if (!workout) {
@@ -134,7 +139,7 @@ router.patch("/workouts/:id", async (req, res): Promise<void> => {
   res.json(UpdateWorkoutResponse.parse(serializeDates({ ...workout, exerciseCount: exerciseRows.length })));
 });
 
-router.delete("/workouts/:id", async (req, res): Promise<void> => {
+router.delete("/workouts/:id", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteWorkoutParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -143,7 +148,7 @@ router.delete("/workouts/:id", async (req, res): Promise<void> => {
 
   const [workout] = await db
     .delete(workoutsTable)
-    .where(eq(workoutsTable.id, params.data.id))
+    .where(and(eq(workoutsTable.id, params.data.id), eq(workoutsTable.userId, req.userId!)))
     .returning();
 
   if (!workout) {

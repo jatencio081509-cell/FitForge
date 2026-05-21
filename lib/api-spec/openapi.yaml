@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: FitForge AI Workout App API
+  description: FitForge Workout App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
   - name: exercises
     description: Exercise library
   - name: workouts
@@ -18,8 +20,6 @@ tags:
     description: Workout session logs
   - name: progress
     description: Progress and analytics
-  - name: ai
-    description: AI coach and suggestions
   - name: profile
     description: User profile
 
@@ -36,6 +36,81 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Email already exists
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login to an existing account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Unauthorized
+    patch:
+      operationId: updateMe
+      tags: [auth]
+      summary: Update current user name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
 
   # ── Exercise Library ──────────────────────────────────────────────────────
   /exercises:
@@ -101,6 +176,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Exercise"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteExercise
+      tags: [exercises]
+      summary: Delete a custom exercise
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
         "404":
           description: Not found
 
@@ -310,83 +400,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/PersonalRecord"
 
-  # ── AI Coach ─────────────────────────────────────────────────────────────
-  /ai/chat:
-    post:
-      operationId: aiChat
-      tags: [ai]
-      summary: Chat with AI workout coach
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AiChatInput"
-      responses:
-        "200":
-          description: AI response
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CoachReply"
-
-  /ai/generate-workout:
-    post:
-      operationId: aiGenerateWorkout
-      tags: [ai]
-      summary: Generate a personalized workout plan with AI
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AiGenerateWorkoutInput"
-      responses:
-        "200":
-          description: Generated workout plan
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Workout"
-
-  /ai/suggest-exercises:
-    post:
-      operationId: aiSuggestExercises
-      tags: [ai]
-      summary: AI suggests exercises based on natural language query
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AiSuggestExercisesInput"
-      responses:
-        "200":
-          description: Suggested exercises
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AiSuggestExercisesResult"
-
-  /ai/weight-advice:
-    post:
-      operationId: aiWeightAdvice
-      tags: [ai]
-      summary: Get AI advice for achieving a weight goal
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AiWeightAdviceInput"
-      responses:
-        "200":
-          description: AI weight advice
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AiWeightAdviceResult"
-
   # ── User Profile ──────────────────────────────────────────────────────────
   /profile:
     get:
@@ -458,6 +471,54 @@ components:
         status:
           type: string
       required: [status]
+
+    # ── Auth ──────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthUser:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    UpdateMeInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
 
     # ── Exercise ──────────────────────────────────────────────────────────
     Exercise:
@@ -769,7 +830,7 @@ components:
 
     PersonalRecord:
       type: object
-      required: [exerciseId, exerciseName, maxWeight, maxReps, achievedAt]
+      required: [exerciseId, exerciseName, maxReps, achievedAt]
       properties:
         exerciseId:
           type: integer
@@ -784,102 +845,10 @@ components:
         achievedAt:
           type: string
 
-    # ── AI ────────────────────────────────────────────────────────────────
-    AiChatInput:
-      type: object
-      required: [message]
-      properties:
-        message:
-          type: string
-        context:
-          type: string
-
-    CoachReply:
-      type: object
-      required: [reply, timestamp]
-      properties:
-        reply:
-          type: string
-        timestamp:
-          type: string
-
-    AiGenerateWorkoutInput:
-      type: object
-      required: [goal, fitnessLevel]
-      properties:
-        goal:
-          type: string
-        fitnessLevel:
-          type: string
-        availableEquipment:
-          type: array
-          items:
-            type: string
-        durationMinutes:
-          type: integer
-        muscleGroups:
-          type: array
-          items:
-            type: string
-
-    AiSuggestExercisesInput:
-      type: object
-      required: [query]
-      properties:
-        query:
-          type: string
-          description: "Natural language query e.g. 'exercises for big arms' or 'cardio that burns fat'"
-        muscleGroups:
-          type: array
-          items:
-            type: string
-        equipment:
-          type: array
-          items:
-            type: string
-
-    AiSuggestExercisesResult:
-      type: object
-      required: [exercises, explanation]
-      properties:
-        exercises:
-          type: array
-          items:
-            $ref: "#/components/schemas/Exercise"
-        explanation:
-          type: string
-
-    AiWeightAdviceInput:
-      type: object
-      required: [currentWeight, goalWeight, unit, fitnessGoal, fitnessLevel, weeklyWorkouts]
-      properties:
-        currentWeight:
-          type: number
-        goalWeight:
-          type: number
-        unit:
-          type: string
-          description: "kg or lbs"
-        fitnessGoal:
-          type: string
-        fitnessLevel:
-          type: string
-        weeklyWorkouts:
-          type: integer
-
-    AiWeightAdviceResult:
-      type: object
-      required: [advice, timestamp]
-      properties:
-        advice:
-          type: string
-        timestamp:
-          type: string
-
     # ── User Profile ──────────────────────────────────────────────────────
     UserProfile:
       type: object
-      required: [id, name, fitnessGoal, fitnessLevel, createdAt]
+      required: [id, name, weightUnit, fitnessGoal, fitnessLevel, weeklyWorkoutTarget, createdAt]
       properties:
         id:
           type: integer

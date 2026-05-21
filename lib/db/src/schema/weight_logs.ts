@@ -1,9 +1,11 @@
-import { pgTable, text, serial, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { usersTable } from "./users";
 
 export const weightLogsTable = pgTable("weight_logs", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
   weight: real("weight").notNull(),
   unit: text("unit").notNull().default("kg"),
   notes: text("notes"),

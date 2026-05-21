@@ -1,16 +1,21 @@
 import { Router, type IRouter } from "express";
-import { desc, sql, eq, gte } from "drizzle-orm";
+import { desc, eq, gte, and } from "drizzle-orm";
 import { db, workoutLogsTable, workoutLogSetsTable, exercisesTable } from "@workspace/db";
 import {
   GetProgressSummaryResponse,
   GetWeeklyProgressResponse,
   GetPersonalRecordsResponse,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middleware/auth";
 
 const router: IRouter = Router();
 
-router.get("/progress/summary", async (_req, res): Promise<void> => {
-  const logs = await db.select().from(workoutLogsTable).orderBy(workoutLogsTable.completedAt);
+router.get("/progress/summary", requireAuth, async (req, res): Promise<void> => {
+  const logs = await db
+    .select()
+    .from(workoutLogsTable)
+    .where(eq(workoutLogsTable.userId, req.userId!))
+    .orderBy(workoutLogsTable.completedAt);
 
   const totalWorkouts = logs.length;
   const totalMinutes = logs.reduce((sum, l) => sum + l.durationMinutes, 0);
@@ -23,7 +28,6 @@ router.get("/progress/summary", async (_req, res): Promise<void> => {
   const workoutsThisWeek = logs.filter(l => new Date(l.completedAt) >= weekAgo).length;
   const workoutsThisMonth = logs.filter(l => new Date(l.completedAt) >= monthAgo).length;
 
-  // Calculate streak (consecutive days)
   let currentStreak = 0;
   let longestStreak = 0;
   if (logs.length > 0) {
@@ -59,18 +63,16 @@ router.get("/progress/summary", async (_req, res): Promise<void> => {
   }));
 });
 
-router.get("/progress/weekly", async (_req, res): Promise<void> => {
-  // Last 8 weeks of data
+router.get("/progress/weekly", requireAuth, async (req, res): Promise<void> => {
   const eightWeeksAgo = new Date();
   eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
 
   const logs = await db
     .select()
     .from(workoutLogsTable)
-    .where(gte(workoutLogsTable.completedAt, eightWeeksAgo))
+    .where(and(eq(workoutLogsTable.userId, req.userId!), gte(workoutLogsTable.completedAt, eightWeeksAgo)))
     .orderBy(workoutLogsTable.completedAt);
 
-  // Group by ISO week start (Monday)
   const weekMap = new Map<string, { workoutCount: number; totalMinutes: number; totalVolume: number }>();
 
   for (const log of logs) {
@@ -93,7 +95,7 @@ router.get("/progress/weekly", async (_req, res): Promise<void> => {
   res.json(GetWeeklyProgressResponse.parse(result));
 });
 
-router.get("/progress/personal-records", async (_req, res): Promise<void> => {
+router.get("/progress/personal-records", requireAuth, async (req, res): Promise<void> => {
   const sets = await db
     .select({
       exerciseId: workoutLogSetsTable.exerciseId,
@@ -106,9 +108,9 @@ router.get("/progress/personal-records", async (_req, res): Promise<void> => {
     .from(workoutLogSetsTable)
     .innerJoin(exercisesTable, eq(workoutLogSetsTable.exerciseId, exercisesTable.id))
     .innerJoin(workoutLogsTable, eq(workoutLogSetsTable.logId, workoutLogsTable.id))
+    .where(eq(workoutLogsTable.userId, req.userId!))
     .orderBy(desc(workoutLogsTable.completedAt));
 
-  // Find best per exercise
   const prMap = new Map<number, { exerciseName: string; muscleGroup: string; maxWeight: number | null; maxReps: number; achievedAt: Date }>();
 
   for (const s of sets) {
@@ -126,9 +128,7 @@ router.get("/progress/personal-records", async (_req, res): Promise<void> => {
         existing.maxWeight = s.weight;
         existing.achievedAt = s.completedAt;
       }
-      if (s.reps > existing.maxReps) {
-        existing.maxReps = s.reps;
-      }
+      if (s.reps > existing.maxReps) existing.maxReps = s.reps;
     }
   }
 
