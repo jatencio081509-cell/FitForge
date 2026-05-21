@@ -228,7 +228,6 @@ export default function WorkoutDetail() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary" className="capitalize text-sm px-3 py-1">{workout.difficulty}</Badge>
               {workout.category && <Badge variant="outline" className="capitalize text-sm px-3 py-1">{workout.category}</Badge>}
-              {workout.isAiGenerated && <Badge className="bg-primary text-primary-foreground text-sm px-3 py-1">AI</Badge>}
             </div>
             {workout.description && <p className="text-lg text-muted-foreground max-w-2xl">{workout.description}</p>}
           </div>

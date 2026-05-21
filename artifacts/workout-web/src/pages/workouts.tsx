@@ -119,11 +119,6 @@ export default function Workouts() {
             ))
           ) : workouts?.map((workout) => (
             <Card key={workout.id} className="group hover:border-primary/50 transition-colors bg-card/50 backdrop-blur relative overflow-hidden">
-              {workout.isAiGenerated && (
-                <div className="absolute top-0 right-0 bg-primary/20 text-primary text-xs font-bold px-3 py-1 rounded-bl-lg">
-                  AI
-                </div>
-              )}
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl pr-8">{workout.name}</CardTitle>
                 <div className="flex items-center gap-2 mt-2">
