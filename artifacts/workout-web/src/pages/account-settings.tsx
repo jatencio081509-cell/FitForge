@@ -1,7 +1,6 @@
 import { AppLayout } from "@/components/layout";
 import { useGetProfile, getGetProfileQueryKey, useUpdateProfile } from "@workspace/api-client-react";
-import { useUser, useClerk, useAuth } from "@clerk/react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -14,9 +13,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
   User, Shield, Ruler, Dumbbell, Bell, Palette, Lock, Database,
-  AlertTriangle, LogOut, Download, Trash2, ChevronRight, Check,
-  Moon, Sun, Monitor, Mail, Smartphone, Clock, Globe, Eye, EyeOff,
-  Key, Activity, RefreshCw, ExternalLink,
+  AlertTriangle, Download, ChevronRight, Check,
+  Moon, Sun, Monitor, Smartphone, Eye,
+  Activity, RefreshCw, Trash2,
 } from "lucide-react";
 
 const STORAGE_KEY = "fitforge_prefs";
@@ -76,9 +75,6 @@ function UnitToggle({ value, onChange, options }: { value: string; onChange: (v:
 }
 
 export default function AccountSettings() {
-  const { user } = useUser();
-  const { signOut, openUserProfile } = useClerk();
-  const { sessionId } = useAuth();
   const { data: profile } = useGetProfile({ query: { queryKey: getGetProfileQueryKey() } });
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
@@ -101,17 +97,15 @@ export default function AccountSettings() {
   const [reminderDays, setReminderDays] = useState<string[]>(prefs.reminderDays ?? ["Mon", "Wed", "Fri"]);
   const [weeklySummary, setWeeklySummary] = useState<boolean>(prefs.weeklySummary ?? false);
   const [milestoneAlerts, setMilestoneAlerts] = useState<boolean>(prefs.milestoneAlerts ?? true);
-  const [emailUpdates, setEmailUpdates] = useState<boolean>(prefs.emailUpdates ?? false);
 
   const [theme, setTheme] = useState<string>(prefs.theme ?? "dark");
   const [reduceMotion, setReduceMotion] = useState<boolean>(prefs.reduceMotion ?? false);
   const [compactMode, setCompactMode] = useState<boolean>(prefs.compactMode ?? false);
 
   const [analyticsOptOut, setAnalyticsOptOut] = useState<boolean>(prefs.analyticsOptOut ?? false);
-  const [profilePublic, setProfilePublic] = useState<boolean>(prefs.profilePublic ?? false);
   const [shareWorkouts, setShareWorkouts] = useState<boolean>(prefs.shareWorkouts ?? false);
 
-  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [clearConfirm, setClearConfirm] = useState("");
 
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -134,7 +128,7 @@ export default function AccountSettings() {
   };
 
   const saveNotifications = () => {
-    savePrefs({ workoutReminder, reminderTime, reminderDays, weeklySummary, milestoneAlerts, emailUpdates });
+    savePrefs({ workoutReminder, reminderTime, reminderDays, weeklySummary, milestoneAlerts });
     toast({ title: "Notification preferences saved" });
   };
 
@@ -145,7 +139,7 @@ export default function AccountSettings() {
   };
 
   const savePrivacy = () => {
-    savePrefs({ analyticsOptOut, profilePublic, shareWorkouts });
+    savePrefs({ analyticsOptOut, shareWorkouts });
     toast({ title: "Privacy settings saved" });
   };
 
@@ -181,18 +175,15 @@ export default function AccountSettings() {
     toast({ title: "Cache cleared" });
   };
 
-  const handleSignOutAll = async () => {
-    await signOut();
-    toast({ title: "Signed out of all devices" });
-  };
-
-  const handleDeleteAccount = () => {
-    if (deleteConfirm !== "DELETE") {
-      toast({ title: "Type DELETE to confirm", variant: "destructive" });
+  const handleClearAllData = () => {
+    if (clearConfirm !== "CLEAR") {
+      toast({ title: "Type CLEAR to confirm", variant: "destructive" });
       return;
     }
-    openUserProfile();
-    toast({ title: "Manage deletion in the security panel that opened" });
+    localStorage.removeItem(STORAGE_KEY);
+    queryClient.clear();
+    setClearConfirm("");
+    toast({ title: "Local preferences cleared" });
   };
 
   const toggleDay = (day: string) => {
@@ -205,131 +196,31 @@ export default function AccountSettings() {
     <AppLayout>
       <div className="max-w-3xl mx-auto pb-16 space-y-6">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Account Settings</h1>
-          <p className="text-muted-foreground text-lg">Manage your account, preferences, and privacy.</p>
+          <h1 className="text-4xl font-bold tracking-tight mb-2">Settings</h1>
+          <p className="text-muted-foreground text-lg">Manage your preferences and app behaviour.</p>
         </div>
 
         {/* ── 1. ACCOUNT ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
-            <SectionHeader icon={User} title="Account" description="Your identity and connected accounts." />
+            <SectionHeader icon={User} title="Account" description="Your FitForge identity." />
             <div className="flex items-center gap-4 p-4 rounded-xl bg-background border border-border">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl font-black text-primary">
-                {user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ?? "?"}
+                {(profile?.name?.[0] ?? "A").toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{user?.fullName || user?.firstName || "—"}</p>
-                <p className="text-sm text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress || "—"}</p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <Check className="w-3 h-3 text-green-500" />
-                    Verified
-                  </Badge>
-                  {user?.externalAccounts?.map(acc => (
-                    <Badge key={acc.id} variant="outline" className="text-xs capitalize">{acc.provider}</Badge>
-                  ))}
-                </div>
+                <p className="font-semibold text-foreground truncate">{profile?.name || "Athlete"}</p>
+                <p className="text-sm text-muted-foreground">Single-user mode — no login required</p>
+                <Badge variant="outline" className="text-xs gap-1 mt-1.5">
+                  <Check className="w-3 h-3 text-green-500" />
+                  Active
+                </Badge>
               </div>
-              <Button variant="outline" size="sm" onClick={() => openUserProfile()} className="gap-2 shrink-0">
-                <ExternalLink className="w-3.5 h-3.5" />
-                Edit
-              </Button>
             </div>
-
-            <Separator />
-            <SettingRow label="Email Address" description={user?.primaryEmailAddress?.emailAddress}>
-              <Badge variant={user?.primaryEmailAddress?.verification?.status === "verified" ? "default" : "destructive"} className="text-xs">
-                {user?.primaryEmailAddress?.verification?.status === "verified" ? "Verified" : "Unverified"}
-              </Badge>
-            </SettingRow>
-            <Separator />
-            <SettingRow label="Account Created" description={user?.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"}>
-              <span />
-            </SettingRow>
-            <Separator />
-            <SettingRow label="Last Sign In" description={user?.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"}>
-              <span />
-            </SettingRow>
           </CardContent>
         </Card>
 
-        {/* ── 2. SECURITY ── */}
-        <Card className="bg-card/50 border-border">
-          <CardContent className="pt-6 space-y-4">
-            <SectionHeader icon={Shield} title="Security" description="Passwords, 2FA, and active sessions." />
-
-            <div className="space-y-1">
-              <button
-                onClick={() => openUserProfile()}
-                className="w-full flex items-center justify-between p-4 bg-background rounded-xl border border-border hover:border-primary/40 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <Key className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Change Password</p>
-                    <p className="text-xs text-muted-foreground">Update your password</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-
-              <button
-                onClick={() => openUserProfile()}
-                className="w-full flex items-center justify-between p-4 bg-background rounded-xl border border-border hover:border-primary/40 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <Smartphone className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Two-Factor Authentication</p>
-                    <p className="text-xs text-muted-foreground">Add an extra layer of protection</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={user?.twoFactorEnabled ? "default" : "outline"} className="text-xs">
-                    {user?.twoFactorEnabled ? "Enabled" : "Disabled"}
-                  </Badge>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </button>
-
-              <button
-                onClick={() => openUserProfile()}
-                className="w-full flex items-center justify-between p-4 bg-background rounded-xl border border-border hover:border-primary/40 transition-colors group"
-              >
-                <div className="flex items-center gap-3">
-                  <Globe className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium">Connected Accounts</p>
-                    <p className="text-xs text-muted-foreground">
-                      {user?.externalAccounts?.length
-                        ? `${user.externalAccounts.length} connected — ${user.externalAccounts.map(a => a.provider).join(", ")}`
-                        : "No external accounts linked"}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Active Session</p>
-                <p className="text-xs text-muted-foreground">Session ID: {sessionId?.slice(0, 18)}…</p>
-              </div>
-              <Badge variant="outline" className="text-xs gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                This device
-              </Badge>
-            </div>
-            <Button variant="outline" size="sm" className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleSignOutAll}>
-              <LogOut className="w-4 h-4" />
-              Sign Out of All Devices
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* ── 3. UNITS & MEASUREMENTS ── */}
+        {/* ── 2. UNITS & MEASUREMENTS ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
             <SectionHeader icon={Ruler} title="Units & Measurements" description="Choose how you see weights, distances, and heights." />
@@ -355,7 +246,7 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        {/* ── 4. WORKOUT PREFERENCES ── */}
+        {/* ── 3. WORKOUT PREFERENCES ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
             <SectionHeader icon={Dumbbell} title="Workout Preferences" description="Defaults applied when you start a new session." />
@@ -417,10 +308,10 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        {/* ── 5. NOTIFICATIONS ── */}
+        {/* ── 4. NOTIFICATIONS ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
-            <SectionHeader icon={Bell} title="Notifications" description="Control when and how FitForge contacts you." />
+            <SectionHeader icon={Bell} title="Notifications" description="Control when FitForge reminds you to train." />
 
             <SettingRow label="Workout Reminders" description="Get reminded to train on your schedule">
               <Switch checked={workoutReminder} onCheckedChange={setWorkoutReminder} />
@@ -450,16 +341,12 @@ export default function AccountSettings() {
             )}
 
             <Separator />
-            <SettingRow label="Weekly Summary" description="Receive a summary of your weekly activity every Sunday">
+            <SettingRow label="Weekly Summary" description="Review your weekly activity every Sunday">
               <Switch checked={weeklySummary} onCheckedChange={setWeeklySummary} />
             </SettingRow>
             <Separator />
             <SettingRow label="Milestone Alerts" description="Celebrate PRs, streaks, and achievements">
               <Switch checked={milestoneAlerts} onCheckedChange={setMilestoneAlerts} />
-            </SettingRow>
-            <Separator />
-            <SettingRow label="Email Updates" description="Product news and feature announcements">
-              <Switch checked={emailUpdates} onCheckedChange={setEmailUpdates} />
             </SettingRow>
 
             <div className="flex justify-end pt-2">
@@ -471,7 +358,7 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        {/* ── 6. APPEARANCE ── */}
+        {/* ── 5. APPEARANCE ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
             <SectionHeader icon={Palette} title="Appearance" description="Customize how FitForge looks and feels." />
@@ -516,20 +403,16 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        {/* ── 7. PRIVACY ── */}
+        {/* ── 6. PRIVACY ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
-            <SectionHeader icon={Lock} title="Privacy" description="Control how your data is used and shared." />
+            <SectionHeader icon={Lock} title="Privacy" description="Control how your data is used." />
 
             <SettingRow label="Opt Out of Analytics" description="Don't contribute to anonymous usage statistics">
               <Switch checked={analyticsOptOut} onCheckedChange={setAnalyticsOptOut} />
             </SettingRow>
             <Separator />
-            <SettingRow label="Public Profile" description="Allow others to discover your profile">
-              <Switch checked={profilePublic} onCheckedChange={setProfilePublic} />
-            </SettingRow>
-            <Separator />
-            <SettingRow label="Share Workout Data" description="Share anonymized workout data to improve recommendations">
+            <SettingRow label="Share Workout Data" description="Share anonymized workout data to improve the app">
               <Switch checked={shareWorkouts} onCheckedChange={setShareWorkouts} />
             </SettingRow>
             <Separator />
@@ -555,7 +438,7 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        {/* ── 8. DATA MANAGEMENT ── */}
+        {/* ── 7. DATA MANAGEMENT ── */}
         <Card className="bg-card/50 border-border">
           <CardContent className="pt-6 space-y-4">
             <SectionHeader icon={Database} title="Data & Exports" description="Download your data or manage local storage." />
@@ -611,48 +494,36 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
 
-        {/* ── 9. DANGER ZONE ── */}
+        {/* ── 8. DANGER ZONE ── */}
         <Card className="bg-card/50 border-destructive/30">
           <CardContent className="pt-6 space-y-4">
             <SectionHeader icon={AlertTriangle} title="Danger Zone" description="Irreversible actions. Proceed with extreme caution." />
 
             <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 space-y-3">
               <div className="flex items-center gap-2">
-                <LogOut className="w-4 h-4 text-destructive" />
-                <p className="text-sm font-semibold text-destructive">Sign Out Everywhere</p>
-              </div>
-              <p className="text-xs text-muted-foreground">Immediately end all active sessions on every device.</p>
-              <Button variant="outline" size="sm" className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-2" onClick={handleSignOutAll}>
-                <LogOut className="w-4 h-4" />
-                Sign Out All Devices
-              </Button>
-            </div>
-
-            <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 space-y-3">
-              <div className="flex items-center gap-2">
                 <Trash2 className="w-4 h-4 text-destructive" />
-                <p className="text-sm font-semibold text-destructive">Delete Account</p>
+                <p className="text-sm font-semibold text-destructive">Clear All Local Preferences</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Permanently delete your FitForge account and all associated data. This cannot be undone.
+                Permanently remove all saved preferences and cached data from this device. Your workout history in the database will not be affected.
               </p>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Type <strong>DELETE</strong> to confirm</Label>
+                <Label className="text-xs text-muted-foreground">Type <strong>CLEAR</strong> to confirm</Label>
                 <div className="flex gap-2">
                   <Input
-                    value={deleteConfirm}
-                    onChange={e => setDeleteConfirm(e.target.value)}
-                    placeholder="DELETE"
+                    value={clearConfirm}
+                    onChange={e => setClearConfirm(e.target.value)}
+                    placeholder="CLEAR"
                     className="bg-background border-destructive/30 font-mono text-sm"
                   />
                   <Button
                     variant="destructive"
                     size="sm"
-                    disabled={deleteConfirm !== "DELETE"}
-                    onClick={handleDeleteAccount}
+                    disabled={clearConfirm !== "CLEAR"}
+                    onClick={handleClearAllData}
                     className="shrink-0"
                   >
-                    Delete
+                    Clear
                   </Button>
                 </div>
               </div>
