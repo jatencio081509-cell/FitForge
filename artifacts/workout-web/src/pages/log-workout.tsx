@@ -212,45 +212,64 @@ export default function LogWorkout() {
 
                   <div>
                     <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                      <span className="col-span-2 text-xs text-muted-foreground text-center">Set</span>
-                      <span className="col-span-4 text-xs text-muted-foreground text-center">Reps</span>
-                      <span className="col-span-4 text-xs text-muted-foreground text-center">Weight (kg)</span>
+                      <span className="col-span-1 text-xs text-muted-foreground text-center">#</span>
+                      <span className="col-span-3 text-xs text-muted-foreground text-center">Reps</span>
+                      <span className="col-span-3 text-xs text-muted-foreground text-center">kg</span>
+                      <span className="col-span-3 text-xs text-muted-foreground text-center">Vol</span>
                       <span className="col-span-2" />
                     </div>
-                    {ex.sets.map((set, setIdx) => (
-                      <div key={setIdx} className="grid grid-cols-12 gap-2 mb-2 items-center">
-                        <div className="col-span-2 flex items-center justify-center">
-                          <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                            {setIdx + 1}
-                          </span>
+                    {ex.sets.map((set, setIdx) => {
+                      const setVol = set.weight !== "" && Number(set.weight) > 0 ? set.reps * Number(set.weight) : null;
+                      return (
+                        <div key={setIdx} className="grid grid-cols-12 gap-2 mb-2 items-center">
+                          <div className="col-span-1 flex items-center justify-center">
+                            <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[11px] font-bold text-muted-foreground">
+                              {setIdx + 1}
+                            </span>
+                          </div>
+                          <Input
+                            type="number" min="1" max="999"
+                            value={set.reps}
+                            onChange={e => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
+                            className="col-span-3 h-9 text-center bg-background text-sm"
+                          />
+                          <Input
+                            type="number" min="0" step="0.5" placeholder="—"
+                            value={set.weight}
+                            onChange={e => updateSet(exIdx, setIdx, "weight", e.target.value === "" ? "" : Number(e.target.value))}
+                            className="col-span-3 h-9 text-center bg-background text-sm"
+                          />
+                          <div className="col-span-3 flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">
+                              {setVol !== null ? `${setVol.toFixed(0)}` : <span className="text-muted-foreground/40">—</span>}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSet(exIdx, setIdx)}
+                            disabled={ex.sets.length === 1}
+                            className="col-span-2 flex items-center justify-center text-muted-foreground hover:text-destructive disabled:opacity-20 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <Input
-                          type="number" min="1" max="999"
-                          value={set.reps}
-                          onChange={e => updateSet(exIdx, setIdx, "reps", Number(e.target.value))}
-                          className="col-span-4 h-9 text-center bg-background text-sm"
-                        />
-                        <Input
-                          type="number" min="0" step="0.5" placeholder="—"
-                          value={set.weight}
-                          onChange={e => updateSet(exIdx, setIdx, "weight", e.target.value === "" ? "" : Number(e.target.value))}
-                          className="col-span-4 h-9 text-center bg-background text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeSet(exIdx, setIdx)}
-                          disabled={ex.sets.length === 1}
-                          className="col-span-2 flex items-center justify-center text-muted-foreground hover:text-destructive disabled:opacity-20 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
-                  <Button type="button" variant="outline" size="sm" onClick={() => addSet(exIdx)} className="w-full h-8 text-xs">
-                    <Plus className="w-3 h-3 mr-1" /> Add Set
-                  </Button>
+                  <div className="flex items-center justify-between">
+                    <Button type="button" variant="outline" size="sm" onClick={() => addSet(exIdx)} className="h-8 text-xs">
+                      <Plus className="w-3 h-3 mr-1" /> Add Set
+                    </Button>
+                    {(() => {
+                      const exVol = ex.sets.reduce((s, set) => s + (set.weight !== "" && Number(set.weight) > 0 ? set.reps * Number(set.weight) : 0), 0);
+                      return exVol > 0 ? (
+                        <span className="text-xs text-muted-foreground">
+                          Total: <span className="text-primary font-semibold">{exVol.toFixed(0)} kg</span>
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
                 </CardContent>
               </Card>
             ))}

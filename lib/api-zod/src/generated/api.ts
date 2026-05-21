@@ -352,6 +352,8 @@ export const GetPersonalRecordsResponseItem = zod.object({
   "muscleGroup": zod.string().optional(),
   "maxWeight": zod.number().nullish(),
   "maxReps": zod.number(),
+  "bestVolume": zod.number().nullish(),
+  "bestVolumeDate": zod.string().nullish(),
   "achievedAt": zod.string()
 })
 export const GetPersonalRecordsResponse = zod.array(GetPersonalRecordsResponseItem)

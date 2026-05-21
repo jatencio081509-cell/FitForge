@@ -842,6 +842,10 @@ components:
           type: ["number", "null"]
         maxReps:
           type: integer
+        bestVolume:
+          type: ["number", "null"]
+        bestVolumeDate:
+          type: ["string", "null"]
         achievedAt:
           type: string
 

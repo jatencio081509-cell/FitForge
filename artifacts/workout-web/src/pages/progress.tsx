@@ -12,132 +12,150 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, ReferenceLine, Dot,
 } from "recharts";
-import { Trophy, TrendingUp, Scale, Target, Loader2, TrendingDown, Flame, Trash2, Dumbbell, Clock } from "lucide-react";
+import {
+  Trophy, TrendingUp, Scale, Target, Loader2, TrendingDown,
+  CalendarIcon, Trash2, Dumbbell, Clock, Zap,
+} from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-// ── Calendar Heatmap ────────────────────────────────────────────────────────
+// ── Workout Calendar ─────────────────────────────────────────────────────────
 
-function CalendarHeatmap() {
+function WorkoutCalendar() {
   const { data: logs } = useListWorkoutLogs({ limit: 500 }, {
     query: { queryKey: getListWorkoutLogsQueryKey({ limit: 500 }) },
   });
 
-  const { workoutDates, weeks } = useMemo(() => {
-    const dateSet = new Set<string>();
-    if (logs) {
-      for (const log of logs) {
-        const d = new Date(log.completedAt);
-        dateSet.add(d.toISOString().slice(0, 10));
-      }
+  const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
+  const [month, setMonth] = useState<Date>(new Date());
+
+  const workoutDateMap = useMemo(() => {
+    const m = new Map<string, typeof logs>(); // iso-date → logs on that day
+    if (!logs) return m;
+    for (const log of logs) {
+      const iso = new Date(log.completedAt).toISOString().slice(0, 10);
+      if (!m.has(iso)) m.set(iso, []);
+      m.get(iso)!.push(log);
     }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Build 16 weeks of days ending today
-    const endDate = new Date(today);
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 16 * 7 + 1);
-
-    // Align start to Monday
-    const dayOfWeek = startDate.getDay(); // 0=Sun
-    const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    startDate.setDate(startDate.getDate() + offset);
-
-    const weeksArr: Array<Array<{ date: Date; iso: string; inRange: boolean }>> = [];
-    let current = new Date(startDate);
-    while (current <= endDate) {
-      const week: Array<{ date: Date; iso: string; inRange: boolean }> = [];
-      for (let d = 0; d < 7; d++) {
-        const iso = current.toISOString().slice(0, 10);
-        week.push({ date: new Date(current), iso, inRange: current <= today });
-        current.setDate(current.getDate() + 1);
-      }
-      weeksArr.push(week);
-    }
-
-    return { workoutDates: dateSet, weeks: weeksArr };
+    return m;
   }, [logs]);
 
-  const totalWorkouts = workoutDates.size;
-  const months = useMemo(() => {
-    const seen = new Set<string>();
-    return weeks.map(week => {
-      const label = new Date(week[0].date).toLocaleDateString("en-US", { month: "short" });
-      if (seen.has(label)) return null;
-      seen.add(label);
-      return label;
-    });
-  }, [weeks]);
+  const workoutDays = useMemo(
+    () => Array.from(workoutDateMap.keys()).map(d => new Date(d + "T12:00:00")),
+    [workoutDateMap],
+  );
+
+  const totalWorkouts = workoutDateMap.size;
+
+  const selectedIso = selectedDay?.toISOString().slice(0, 10) ?? null;
+  const selectedLogs = selectedIso ? (workoutDateMap.get(selectedIso) ?? []) : [];
 
   return (
     <Card className="bg-card/50 backdrop-blur border-border">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl flex items-center gap-2">
-            <Flame className="w-5 h-5 text-orange-500" />
-            Workout Activity
+            <CalendarIcon className="w-5 h-5 text-primary" />
+            Workout Calendar
           </CardTitle>
-          <span className="text-sm text-muted-foreground">{totalWorkouts} session{totalWorkouts !== 1 ? "s" : ""} logged</span>
+          <span className="text-sm text-muted-foreground">
+            {totalWorkouts} session{totalWorkouts !== 1 ? "s" : ""} logged
+          </span>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto pb-2">
-          {/* Month labels */}
-          <div className="flex gap-1.5 mb-1 ml-7">
-            {weeks.map((_, i) => (
-              <div key={i} className="w-4 text-[10px] text-muted-foreground shrink-0 text-center">
-                {months[i] ?? ""}
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-1.5">
-            {/* Day labels */}
-            <div className="flex flex-col gap-1.5 mr-1">
-              {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(d => (
-                <div key={d} className="w-5 h-4 text-[10px] text-muted-foreground/60 flex items-center justify-end pr-1">
-                  {d}
-                </div>
-              ))}
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="shrink-0">
+            <Calendar
+              mode="single"
+              selected={selectedDay}
+              onSelect={(d) => setSelectedDay(d?.toDateString() === selectedDay?.toDateString() ? undefined : d)}
+              month={month}
+              onMonthChange={setMonth}
+              modifiers={{ workout: workoutDays }}
+              modifiersStyles={{
+                workout: {
+                  fontWeight: "700",
+                  color: "hsl(var(--primary))",
+                  borderBottom: "3px solid hsl(var(--primary))",
+                },
+              }}
+              classNames={{
+                day: "group/day relative aspect-square h-full w-full select-none p-0 text-center",
+              }}
+            />
+            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground px-3">
+              <div className="w-2.5 h-0.5 rounded-full bg-primary" />
+              <span>Workout day</span>
+              <span className="ml-2 opacity-60">· Click to inspect</span>
             </div>
-            {/* Calendar grid */}
-            {weeks.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-1.5">
-                {week.map(({ iso, inRange }) => {
-                  const hasWorkout = workoutDates.has(iso);
-                  return (
-                    <div
-                      key={iso}
-                      title={hasWorkout ? `Workout on ${iso}` : iso}
-                      className="w-4 h-4 rounded-sm transition-all"
-                      style={{
-                        backgroundColor: !inRange
-                          ? "transparent"
-                          : hasWorkout
-                          ? "hsl(var(--primary))"
-                          : "hsl(var(--border))",
-                        opacity: inRange ? 1 : 0,
-                        boxShadow: hasWorkout ? "0 0 4px hsl(var(--primary) / 0.5)" : "none",
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            ))}
           </div>
-        </div>
-        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-          <span>Less</span>
-          <div className="w-3 h-3 rounded-sm bg-border" />
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "hsl(var(--primary) / 0.4)" }} />
-          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "hsl(var(--primary))" }} />
-          <span>More</span>
+
+          <div className="flex-1 min-w-0">
+            {selectedDay ? (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <CalendarIcon className="w-4 h-4 text-primary" />
+                  {selectedDay.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                </p>
+                {selectedLogs.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    No workouts logged on this day
+                  </div>
+                ) : (
+                  selectedLogs.map(log => (
+                    <div key={log.id} className="rounded-xl bg-background border border-border p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                          <Dumbbell className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">
+                            {(log as { workoutName?: string }).workoutName ?? "Workout"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(log.completedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        {(log as { durationMinutes?: number }).durationMinutes && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {(log as { durationMinutes?: number }).durationMinutes} min
+                          </span>
+                        )}
+                        {log.rating && (
+                          <span>{"⭐".repeat(log.rating)}</span>
+                        )}
+                      </div>
+                      {(log as { notes?: string }).notes && (
+                        <p className="mt-2 text-xs text-muted-foreground italic border-t border-border pt-2">
+                          {(log as { notes?: string }).notes}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-3 py-10">
+                <CalendarIcon className="w-10 h-10 opacity-15" />
+                <p className="text-sm text-center">
+                  Click any <span className="text-primary font-semibold">highlighted date</span> to see<br />your workout details
+                </p>
+                {workoutDays.length > 0 && (
+                  <p className="text-xs opacity-60">{workoutDays.length} active day{workoutDays.length !== 1 ? "s" : ""} this year</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -207,7 +225,9 @@ function WeightChart() {
             <p className="text-[11px] text-muted-foreground">{unit}</p>
           </div>
           <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-center">
-            <p className="text-[11px] text-muted-foreground mb-0.5 flex items-center justify-center gap-1"><Target className="w-3 h-3" /> Goal</p>
+            <p className="text-[11px] text-muted-foreground mb-0.5 flex items-center justify-center gap-1">
+              <Target className="w-3 h-3" /> Goal
+            </p>
             <p className="text-xl font-bold text-primary">{goalWeight ?? "—"}</p>
             <p className="text-[11px] text-muted-foreground">{unit}</p>
           </div>
@@ -215,7 +235,9 @@ function WeightChart() {
             <p className="text-[11px] text-muted-foreground mb-0.5">Change</p>
             {diff !== null ? (
               <div className="flex items-center justify-center gap-1">
-                {diff < 0 ? <TrendingDown className="w-4 h-4 text-green-500" /> : <TrendingUp className="w-4 h-4 text-yellow-500" />}
+                {diff < 0
+                  ? <TrendingDown className="w-4 h-4 text-green-500" />
+                  : <TrendingUp className="w-4 h-4 text-yellow-500" />}
                 <p className="text-xl font-bold" style={{ color: diff < 0 ? "#22c55e" : "#f59e0b" }}>
                   {diff > 0 ? "+" : ""}{diff.toFixed(1)}
                 </p>
@@ -238,9 +260,12 @@ function WeightChart() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                  itemStyle={{ color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
-                  formatter={(v: number) => [`${v} ${unit}`, "Weight"]} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                  itemStyle={{ color: "hsl(var(--foreground))" }}
+                  labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
+                  formatter={(v: number) => [`${v} ${unit}`, "Weight"]}
+                />
                 {goalWeight != null && (
                   <ReferenceLine y={goalWeight} stroke="hsl(var(--primary))" strokeDasharray="6 3" strokeOpacity={0.6}
                     label={{ value: `Goal: ${goalWeight}${unit}`, fill: "hsl(var(--primary))", fontSize: 11, position: "insideTopRight" }} />
@@ -301,7 +326,9 @@ function WorkoutLogsSection() {
       <CardContent>
         {isLoading ? (
           <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-14 bg-muted/30 rounded-xl animate-pulse" />)}
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-14 bg-muted/30 rounded-xl animate-pulse" />
+            ))}
           </div>
         ) : displayed.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground">
@@ -320,7 +347,9 @@ function WorkoutLogsSection() {
                     <Dumbbell className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{(log as { workoutName?: string }).workoutName ?? "Workout"}</p>
+                    <p className="font-semibold text-sm truncate">
+                      {(log as { workoutName?: string }).workoutName ?? "Workout"}
+                    </p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                       <span>{dateStr} · {timeStr}</span>
                       {(log as { durationMinutes?: number }).durationMinutes && (
@@ -370,10 +399,11 @@ export default function Progress() {
         </div>
 
         <div className="space-y-6">
-          <CalendarHeatmap />
+          <WorkoutCalendar />
           <WorkoutLogsSection />
           <WeightChart />
 
+          {/* Volume Trends */}
           <Card className="bg-card/50 backdrop-blur border-border">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center gap-2">
@@ -391,8 +421,11 @@ export default function Progress() {
                       <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false}
                         tickFormatter={val => new Date(val).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                        itemStyle={{ color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                        itemStyle={{ color: "hsl(var(--foreground))" }}
+                        labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
+                      />
                       <Bar dataKey="totalVolume" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -401,6 +434,7 @@ export default function Progress() {
             </CardContent>
           </Card>
 
+          {/* Personal Records */}
           <Card className="bg-card/50 backdrop-blur border-border">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -412,31 +446,48 @@ export default function Progress() {
               {loadingRecords ? (
                 <div className="h-40 bg-accent/5 rounded animate-pulse" />
               ) : records?.length ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {records.map((pr, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-background border border-border flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0 border border-yellow-500/20">
-                        <Trophy className="w-6 h-6 text-yellow-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-lg truncate">{pr.exerciseName}</p>
-                        <div className="flex items-center gap-3 text-muted-foreground mt-1">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70">Max Wt</span>
-                            <span className="font-bold text-foreground">{pr.maxWeight || 0} kg</span>
-                          </div>
-                          <div className="w-px h-6 bg-border" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70">Max Reps</span>
-                            <span className="font-bold text-foreground">{pr.maxReps}</span>
-                          </div>
+                    <div
+                      key={i}
+                      className="p-4 rounded-xl bg-background border border-border hover:border-primary/30 transition-colors"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0 border border-yellow-500/20">
+                          <Trophy className="w-5 h-5 text-yellow-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm truncate">{pr.exerciseName}</p>
+                          <p className="text-[11px] text-muted-foreground capitalize mt-0.5">{pr.muscleGroup}</p>
                         </div>
                       </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center py-2 px-1 rounded-lg bg-muted/30">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-1">Max Wt</p>
+                          <p className="font-bold text-foreground text-sm">{pr.maxWeight != null ? `${pr.maxWeight} kg` : "BW"}</p>
+                        </div>
+                        <div className="text-center py-2 px-1 rounded-lg bg-muted/30">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 mb-1">Max Reps</p>
+                          <p className="font-bold text-foreground text-sm">{pr.maxReps}</p>
+                        </div>
+                        <div className="text-center py-2 px-1 rounded-lg bg-primary/8 border border-primary/15">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-primary/70 mb-1 flex items-center justify-center gap-0.5">
+                            <Zap className="w-2.5 h-2.5" />Vol PR
+                          </p>
+                          <p className="font-bold text-primary text-sm">
+                            {pr.bestVolume != null ? (pr.bestVolume >= 1000 ? `${(pr.bestVolume / 1000).toFixed(1)}t` : `${pr.bestVolume}kg`) : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/60 mt-2 text-right">
+                        PR set {new Date(pr.achievedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
+                  <Trophy className="w-12 h-12 mx-auto mb-3 opacity-15" />
                   <p>No personal records yet. Time to lift heavy!</p>
                 </div>
               )}

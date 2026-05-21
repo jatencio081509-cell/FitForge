@@ -351,7 +351,7 @@ export default function ProgressScreen() {
                         {pr.muscleGroup} · {new Date(pr.achievedAt).toLocaleDateString()}
                       </Text>
                     </View>
-                    <View style={{ alignItems: "flex-end" }}>
+                    <View style={{ alignItems: "flex-end", gap: 4 }}>
                       {pr.maxWeight != null && (
                         <Text style={[styles.prWeight, { color: colors.primary, fontFamily: "Outfit_700Bold" }]}>
                           {pr.maxWeight}kg
@@ -360,6 +360,13 @@ export default function ProgressScreen() {
                       <Text style={[styles.prReps, { color: colors.mutedForeground, fontFamily: "Outfit_400Regular" }]}>
                         {pr.maxReps} reps
                       </Text>
+                      {pr.bestVolume != null && (
+                        <View style={[styles.volBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
+                          <Text style={[styles.volText, { color: colors.primary, fontFamily: "Outfit_600SemiBold" }]}>
+                            ⚡ {pr.bestVolume >= 1000 ? `${(pr.bestVolume / 1000).toFixed(1)}t` : `${pr.bestVolume}kg`} vol
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 ))
@@ -477,6 +484,8 @@ const styles = StyleSheet.create({
   prReps: { fontSize: 12 },
   emptyCard: { borderRadius: 16, borderWidth: 1, padding: 32, alignItems: "center", gap: 12, marginTop: 8 },
   emptyText: { fontSize: 13, textAlign: "center", lineHeight: 20 },
+  volBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 3 },
+  volText: { fontSize: 11 },
   modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
   modalSheet: { borderRadius: 24, borderWidth: 1, padding: 24, margin: 16, gap: 16 },
   modalTitle: { fontSize: 20 },

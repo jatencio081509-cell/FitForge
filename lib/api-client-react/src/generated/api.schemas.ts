@@ -220,6 +220,10 @@ export interface PersonalRecord {
   /** @nullable */
   maxWeight?: number | null;
   maxReps: number;
+  /** @nullable */
+  bestVolume?: number | null;
+  /** @nullable */
+  bestVolumeDate?: string | null;
   achievedAt: string;
 }
 

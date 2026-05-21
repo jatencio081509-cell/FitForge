@@ -103,6 +103,7 @@ router.get("/progress/personal-records", requireAuth, async (req, res): Promise<
       muscleGroup: exercisesTable.muscleGroup,
       reps: workoutLogSetsTable.reps,
       weight: workoutLogSetsTable.weight,
+      logId: workoutLogSetsTable.logId,
       completedAt: workoutLogsTable.completedAt,
     })
     .from(workoutLogSetsTable)
@@ -111,7 +112,30 @@ router.get("/progress/personal-records", requireAuth, async (req, res): Promise<
     .where(eq(workoutLogsTable.userId, req.userId!))
     .orderBy(desc(workoutLogsTable.completedAt));
 
-  const prMap = new Map<number, { exerciseName: string; muscleGroup: string; maxWeight: number | null; maxReps: number; achievedAt: Date }>();
+  type PRData = {
+    exerciseName: string;
+    muscleGroup: string;
+    maxWeight: number | null;
+    maxReps: number;
+    bestVolume: number | null;
+    bestVolumeDate: Date | null;
+    achievedAt: Date;
+  };
+
+  const prMap = new Map<number, PRData>();
+
+  // Calculate per-session volume for each exercise (logId + exerciseId)
+  const sessionVolumeMap = new Map<string, { volume: number; date: Date }>();
+  for (const s of sets) {
+    const key = `${s.logId}:${s.exerciseId}`;
+    const setVol = s.reps * (s.weight ?? 0);
+    const existing = sessionVolumeMap.get(key);
+    if (!existing) {
+      sessionVolumeMap.set(key, { volume: setVol, date: s.completedAt });
+    } else {
+      existing.volume += setVol;
+    }
+  }
 
   for (const s of sets) {
     const existing = prMap.get(s.exerciseId);
@@ -121,6 +145,8 @@ router.get("/progress/personal-records", requireAuth, async (req, res): Promise<
         muscleGroup: s.muscleGroup,
         maxWeight: s.weight,
         maxReps: s.reps,
+        bestVolume: null,
+        bestVolumeDate: null,
         achievedAt: s.completedAt,
       });
     } else {
@@ -132,9 +158,24 @@ router.get("/progress/personal-records", requireAuth, async (req, res): Promise<
     }
   }
 
+  // Apply best session volume
+  for (const [key, { volume, date }] of sessionVolumeMap) {
+    const exerciseId = Number(key.split(":")[1]);
+    const pr = prMap.get(exerciseId);
+    if (pr && (pr.bestVolume === null || volume > pr.bestVolume)) {
+      pr.bestVolume = volume;
+      pr.bestVolumeDate = date;
+    }
+  }
+
   const records = Array.from(prMap.entries()).map(([exerciseId, data]) => ({
     exerciseId,
-    ...data,
+    exerciseName: data.exerciseName,
+    muscleGroup: data.muscleGroup,
+    maxWeight: data.maxWeight,
+    maxReps: data.maxReps,
+    bestVolume: data.bestVolume,
+    bestVolumeDate: data.bestVolumeDate?.toISOString() ?? null,
     achievedAt: data.achievedAt.toISOString(),
   }));
 
