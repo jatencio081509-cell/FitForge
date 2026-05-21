@@ -30,10 +30,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: "chart.line.uptrend.xyaxis", selected: "chart.line.uptrend.xyaxis" }} />
         <Label>Progress</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="coach">
-        <Icon sf={{ default: "brain.head.profile", selected: "brain.head.profile" }} />
-        <Label>AI Coach</Label>
-      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -125,18 +121,6 @@ function ClassicTabLayout() {
               <SymbolView name="chart.line.uptrend.xyaxis" tintColor={color} size={22} />
             ) : (
               <Feather name="trending-up" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: "AI Coach",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="brain.head.profile" tintColor={color} size={22} />
-            ) : (
-              <Feather name="cpu" size={22} color={color} />
             ),
         }}
       />

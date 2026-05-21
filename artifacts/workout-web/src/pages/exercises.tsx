@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout";
-import { useListExercises, getListExercisesQueryKey, useAiSuggestExercises, useCreateExercise } from "@workspace/api-client-react";
+import { useListExercises, getListExercisesQueryKey, useCreateExercise } from "@workspace/api-client-react";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Activity, Dumbbell, Info, Cpu, Sparkles, X, Loader2, Plus, Trash2 } from "lucide-react";
+import { Search, Activity, Dumbbell, Info, Loader2, Plus, Trash2 } from "lucide-react";
 
 const MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "arms", "core", "full_body"];
 const MUSCLE_ICONS: Record<string, string> = {
@@ -22,8 +22,6 @@ export default function Exercises() {
   const [search, setSearch] = useState("");
   const [muscle, setMuscle] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
-  const [aiQuery, setAiQuery] = useState("");
-  const [showAiResults, setShowAiResults] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "", muscleGroup: "chest", equipment: "bodyweight",
@@ -32,7 +30,6 @@ export default function Exercises() {
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-  const aiSuggest = useAiSuggestExercises();
   const createExercise = useCreateExercise();
 
   const handleDeleteExercise = async (id: number) => {
@@ -41,10 +38,6 @@ export default function Exercises() {
     try {
       await fetch(`/api/exercises/${id}`, { method: "DELETE" });
       queryClient.invalidateQueries({ queryKey: getListExercisesQueryKey() });
-      if (showAiResults && aiSuggest.data) {
-        aiSuggest.reset();
-        setShowAiResults(false);
-      }
     } finally {
       setDeletingId(null);
     }
@@ -60,12 +53,6 @@ export default function Exercises() {
     query: { queryKey: getListExercisesQueryKey(queryParams) }
   });
 
-  const handleAiSearch = async () => {
-    if (!aiQuery.trim()) return;
-    await aiSuggest.mutateAsync({ data: { query: aiQuery.trim(), ...(muscle !== "all" ? { muscleGroups: [muscle] } : {}) } });
-    setShowAiResults(true);
-  };
-
   const handleCreateExercise = async (e: React.FormEvent) => {
     e.preventDefault();
     await createExercise.mutateAsync({ data: createForm });
@@ -74,7 +61,7 @@ export default function Exercises() {
     setCreateForm({ name: "", muscleGroup: "chest", equipment: "bodyweight", category: "strength", description: "" });
   };
 
-  const displayExercises = showAiResults && aiSuggest.data ? aiSuggest.data.exercises : exercises;
+  const displayExercises = exercises;
 
   return (
     <AppLayout>
@@ -83,7 +70,7 @@ export default function Exercises() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight mb-1">Exercise Library</h1>
-            <p className="text-muted-foreground">Browse movements or let AI find them for you.</p>
+            <p className="text-muted-foreground">Browse {exercises?.length ?? 0}+ movements across every muscle group.</p>
           </div>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
@@ -157,12 +144,12 @@ export default function Exercises() {
         {/* Muscle group quick-select */}
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => { setMuscle("all"); setShowAiResults(false); }}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${muscle === "all" && !showAiResults ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}
+            onClick={() => setMuscle("all")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${muscle === "all" ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}
           >All</button>
           {MUSCLE_GROUPS.map(mg => (
-            <button key={mg} onClick={() => { setMuscle(mg); setShowAiResults(false); }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5 ${muscle === mg && !showAiResults ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}
+            <button key={mg} onClick={() => setMuscle(mg)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5 ${muscle === mg ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}
             >
               <span>{MUSCLE_ICONS[mg]}</span>
               <span className="capitalize">{mg.replace("_", " ")}</span>
@@ -170,71 +157,34 @@ export default function Exercises() {
           ))}
         </div>
 
-        {/* Search + AI row */}
+        {/* Search row */}
         <div className="flex flex-col md:flex-row gap-3">
-          {/* Manual search */}
-          {!showAiResults && (
-            <div className="flex gap-3 flex-1">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search exercises..." className="pl-9 bg-card" value={search}
-                  onChange={e => setSearch(e.target.value)} />
-              </div>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="strength">Strength</SelectItem>
-                  <SelectItem value="cardio">Cardio</SelectItem>
-                  <SelectItem value="flexibility">Flexibility</SelectItem>
-                  <SelectItem value="sports">Sports</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* AI Search */}
-          <div className={`flex gap-2 items-center ${showAiResults ? "flex-1" : ""}`}>
-            <div className="relative flex-1">
-              <Cpu className="absolute left-3 top-3 w-4 h-4 text-primary" />
-              <Input
-                placeholder='Ask AI — "exercises for big arms"...'
-                value={aiQuery}
-                onChange={e => setAiQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleAiSearch()}
-                className="pl-9 bg-card border-primary/20 focus:border-primary/50"
-              />
-            </div>
-            <Button onClick={handleAiSearch} disabled={aiSuggest.isPending || !aiQuery.trim()} variant="outline" className="gap-2 border-primary/30 text-primary hover:bg-primary/10 shrink-0">
-              {aiSuggest.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {aiSuggest.isPending ? "..." : "AI"}
-            </Button>
-            {showAiResults && (
-              <Button variant="ghost" size="icon" onClick={() => { setShowAiResults(false); setAiQuery(""); aiSuggest.reset(); }}>
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Search exercises..." className="pl-9 bg-card" value={search}
+              onChange={e => setSearch(e.target.value)} />
           </div>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="strength">Strength</SelectItem>
+              <SelectItem value="cardio">Cardio</SelectItem>
+              <SelectItem value="flexibility">Flexibility</SelectItem>
+              <SelectItem value="sports">Sports</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-
-        {/* AI explanation banner */}
-        {showAiResults && aiSuggest.data && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-primary/10 rounded-xl border border-primary/20 text-sm text-muted-foreground">
-            <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="italic">{aiSuggest.data.explanation}</span>
-            <span className="ml-auto text-primary font-medium">{aiSuggest.data.exercises.length} results</span>
-          </div>
-        )}
 
         {/* Exercise grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {isLoading && !showAiResults ? (
+          {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-28 bg-card rounded-xl animate-pulse" />
             ))
-          ) : displayExercises?.map((exercise, idx) => (
+          ) : displayExercises?.map((exercise) => (
             <Card key={exercise.id}
-              className={`bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40 ${showAiResults && idx === 0 ? "ring-1 ring-primary/30" : ""}`}
+              className="bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40"
             >
               <CardContent className="p-4 flex gap-3 items-center">
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 border border-border group-hover:border-primary/30 transition-colors text-xl">
@@ -243,7 +193,6 @@ export default function Exercises() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
                     <h3 className="font-semibold truncate">{exercise.name}</h3>
-                    {showAiResults && idx === 0 && <Badge className="text-xs bg-primary/20 text-primary border-primary/30 shrink-0">Top Pick</Badge>}
                     {exercise.isCustom && <Badge variant="outline" className="text-xs shrink-0">Custom</Badge>}
                   </div>
                   <div className="flex flex-wrap gap-1.5 mb-1.5">

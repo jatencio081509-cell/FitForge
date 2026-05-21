@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity, Dumbbell, CalendarRange, LineChart,
-  Bot, User, LayoutDashboard, Menu, X,
+  User, LayoutDashboard, Menu, X, Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -11,8 +11,8 @@ const navItems = [
   { href: "/exercises", label: "Exercises", icon: Dumbbell },
   { href: "/log", label: "Log", icon: Activity },
   { href: "/progress", label: "Progress", icon: LineChart },
-  { href: "/ai-coach", label: "AI Coach", icon: Bot },
   { href: "/profile", label: "Profile", icon: User },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 function NavLink({ href, label, icon: Icon, onClick }: {
@@ -39,7 +39,8 @@ function NavLink({ href, label, icon: Icon, onClick }: {
 export function Sidebar() {
   return (
     <div className="w-60 h-full bg-card border-r border-border flex flex-col shrink-0">
-      <div className="p-5 pb-4">
+      <div className="p-5 pb-4 flex items-center gap-2">
+        <img src="/favicon.svg" className="w-8 h-8 rounded-lg" alt="" />
         <h1 className="text-xl font-bold tracking-tight text-primary uppercase">FitForge</h1>
       </div>
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
@@ -54,7 +55,10 @@ export function Sidebar() {
 function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
   return (
     <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card md:hidden shrink-0">
-      <h1 className="text-lg font-bold tracking-tight text-primary uppercase">FitForge</h1>
+      <div className="flex items-center gap-2">
+        <img src="/favicon.svg" className="w-7 h-7 rounded-md" alt="" />
+        <h1 className="text-lg font-bold tracking-tight text-primary uppercase">FitForge</h1>
+      </div>
       <button
         onClick={onMenuOpen}
         className="w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

@@ -15,8 +15,8 @@ import WorkoutDetail from "@/pages/workout-detail";
 import Exercises from "@/pages/exercises";
 import LogWorkout from "@/pages/log-workout";
 import Progress from "@/pages/progress";
-import AiCoach from "@/pages/ai-coach";
 import Profile from "@/pages/profile";
+import AccountSettings from "@/pages/account-settings";
 
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
@@ -174,8 +174,8 @@ function ClerkProviderWithRoutes() {
               <Route path="/exercises" component={() => <ProtectedRoute component={Exercises} />} />
               <Route path="/log" component={() => <ProtectedRoute component={LogWorkout} />} />
               <Route path="/progress" component={() => <ProtectedRoute component={Progress} />} />
-              <Route path="/ai-coach" component={() => <ProtectedRoute component={AiCoach} />} />
               <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+              <Route path="/settings" component={() => <ProtectedRoute component={AccountSettings} />} />
               <Route component={NotFound} />
             </Switch>
             <Toaster />

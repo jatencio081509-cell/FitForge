@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout";
 import {
   useGetProfile, getGetProfileQueryKey, useUpdateProfile,
-  useListWeightLogs, useCreateWeightLog, useAiWeightAdvice,
+  useListWeightLogs, useCreateWeightLog,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, UserCircle, Target, Scale, Cpu, TrendingDown, TrendingUp, Loader2 } from "lucide-react";
+import { Save, UserCircle, Target, Scale, TrendingDown, TrendingUp, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 function WeightGoalPanel() {
@@ -18,13 +18,11 @@ function WeightGoalPanel() {
   const { data: weightLogs } = useListWeightLogs();
   const createWeightLog = useCreateWeightLog();
   const updateProfile = useUpdateProfile();
-  const aiWeightAdvice = useAiWeightAdvice();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [newWeight, setNewWeight] = useState("");
   const [newGoal, setNewGoal] = useState("");
-  const [advice, setAdvice] = useState<string | null>(null);
 
   const unit = profile?.weightUnit ?? "kg";
   const currentWeight = weightLogs?.[0]?.weight ?? profile?.weight;
@@ -50,20 +48,6 @@ function WeightGoalPanel() {
     toast({ title: `Weight goal set: ${g}${unit}` });
   };
 
-  const handleAiAdvice = async () => {
-    if (!currentWeight || !goalWeight || !profile) return;
-    const res = await aiWeightAdvice.mutateAsync({
-      data: {
-        currentWeight,
-        goalWeight,
-        unit,
-        fitnessGoal: profile.fitnessGoal,
-        fitnessLevel: profile.fitnessLevel,
-        weeklyWorkouts: profile.weeklyWorkoutTarget,
-      },
-    });
-    setAdvice(res.advice);
-  };
 
   return (
     <Card className="bg-card/50 border-border overflow-hidden">
@@ -154,29 +138,6 @@ function WeightGoalPanel() {
           </div>
         )}
 
-        {/* AI advice */}
-        {currentWeight && goalWeight && (
-          <div className="space-y-3">
-            <Button
-              onClick={handleAiAdvice}
-              disabled={aiWeightAdvice.isPending}
-              className="w-full gap-2"
-              variant="outline"
-            >
-              <Cpu className="w-4 h-4 text-primary" />
-              {aiWeightAdvice.isPending ? "Getting AI Plan..." : "Get AI Weight Plan"}
-            </Button>
-            {advice && (
-              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2">
-                <div className="flex items-center gap-2 text-primary text-sm font-semibold">
-                  <Cpu className="w-4 h-4" />
-                  AI Coach Plan
-                </div>
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{advice}</p>
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -196,6 +157,7 @@ export default function Profile() {
     fitnessGoal: "general_fitness",
     fitnessLevel: "beginner",
     weeklyWorkoutTarget: "3",
+    weightUnit: "kg",
   });
 
   const initialized = useRef(false);
@@ -210,6 +172,7 @@ export default function Profile() {
         fitnessGoal: profile.fitnessGoal || "general_fitness",
         fitnessLevel: profile.fitnessLevel || "beginner",
         weeklyWorkoutTarget: profile.weeklyWorkoutTarget?.toString() || "3",
+        weightUnit: profile.weightUnit || "kg",
       });
       initialized.current = true;
     }
@@ -226,6 +189,7 @@ export default function Profile() {
         fitnessGoal: formData.fitnessGoal,
         fitnessLevel: formData.fitnessLevel,
         weeklyWorkoutTarget: formData.weeklyWorkoutTarget ? Number(formData.weeklyWorkoutTarget) : undefined,
+        weightUnit: formData.weightUnit,
       }
     }, {
       onSuccess: () => {
@@ -266,8 +230,21 @@ export default function Profile() {
                   <Input type="number" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="bg-background" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Weight (kg)</Label>
-                  <Input type="number" step="0.1" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} className="bg-background" />
+                  <Label>Weight Unit</Label>
+                  <div className="flex gap-2">
+                    {(["kg", "lbs"] as const).map(u => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setFormData({...formData, weightUnit: u})}
+                        className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${formData.weightUnit === u ? "bg-primary text-black border-primary" : "bg-background border-border text-muted-foreground hover:border-primary/50"}`}
+                      >{u.toUpperCase()}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Body Weight ({formData.weightUnit})</Label>
+                  <Input type="number" step="0.1" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} className="bg-background" placeholder={formData.weightUnit === "kg" ? "e.g. 75.0" : "e.g. 165"} />
                 </div>
                 <div className="space-y-2">
                   <Label>Height (cm)</Label>

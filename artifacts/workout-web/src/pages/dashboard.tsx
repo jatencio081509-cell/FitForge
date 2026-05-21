@@ -100,8 +100,8 @@ export default function Dashboard() {
                 Log Freestyle Session
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link href="/ai-coach" className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors font-medium">
-                Ask AI Coach
+              <Link href="/exercises" className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors font-medium">
+                Browse Exercise Library
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>

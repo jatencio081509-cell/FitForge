@@ -1,12 +1,12 @@
 import { Link } from "wouter";
-import { Dumbbell, Zap, BarChart2, Brain, ChevronRight, Play } from "lucide-react";
+import { Dumbbell, Zap, BarChart2, Users, ChevronRight, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const features = [
   { icon: Dumbbell, title: "Smart Workouts", desc: "Structured routines with sets, reps, and rest timers." },
   { icon: Zap, title: "Live Session Tracker", desc: "Real-time timer and set checkboxes as you train." },
   { icon: BarChart2, title: "Progress Analytics", desc: "Weekly trends, personal records, and streaks." },
-  { icon: Brain, title: "AI Coach", desc: "Get personalized workout recommendations instantly." },
+  { icon: Users, title: "150+ Exercises", desc: "A growing library covering every muscle group and skill level." },
 ];
 
 export default function Landing() {
@@ -36,14 +36,14 @@ export default function Landing() {
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 max-w-4xl mx-auto w-full">
         <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 text-sm text-primary font-medium mb-8">
           <Zap className="w-3.5 h-3.5" />
-          AI-powered fitness tracking
+          Your personal workout tracker
         </div>
         <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
           Train smarter,<br />
           <span className="text-primary">not just harder.</span>
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl mb-10 leading-relaxed">
-          FitForge gives you structured workouts, a live session tracker, progress analytics, and an AI coach — all in one place.
+          FitForge gives you structured workouts, a live session tracker, progress analytics, and a 150+ exercise library — all in one place.
         </p>
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <Link href="/sign-up">

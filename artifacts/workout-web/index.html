@@ -1,24 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>FitForge — AI Workout App</title>
-    <meta name="description" content="FitForge — AI Workout App — built on Replit. Update this description to reflect the app." />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <title>FitForge — Workout Tracker</title>
+    <meta name="description" content="FitForge — Track workouts, log exercises, and monitor your fitness progress." />
     <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="FitForge — AI Workout App" />
-    <meta property="og:description" content="FitForge — AI Workout App — built on Replit. Update this description to reflect the app." />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FitForge" />
+    <meta property="og:title" content="FitForge — Workout Tracker" />
+    <meta property="og:description" content="FitForge — Track workouts, log exercises, and monitor your fitness progress." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="FitForge — AI Workout App" />
-    <meta name="twitter:description" content="FitForge — AI Workout App — built on Replit. Update this description to reflect the app." />
+    <meta name="twitter:title" content="FitForge — Workout Tracker" />
+    <meta name="twitter:description" content="FitForge — Track workouts, log exercises, and monitor your fitness progress." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
