@@ -142,6 +142,29 @@ router.patch("/workouts/:id", requireAuth, async (req, res): Promise<void> => {
   res.json(UpdateWorkoutResponse.parse(serializeDates({ ...workout, exerciseCount: exerciseRows.length })));
 });
 
+router.post("/workouts/:id/exercises", requireAuth, async (req, res): Promise<void> => {
+  const workoutId = Number(req.params.id);
+  if (isNaN(workoutId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const exercises = Array.isArray(req.body.exercises) ? req.body.exercises : [];
+  if (exercises.length === 0) { res.json([]); return; }
+
+  await db.delete(workoutExercisesTable).where(eq(workoutExercisesTable.workoutId, workoutId));
+
+  const rows = await db.insert(workoutExercisesTable).values(
+    exercises.map((e: { exerciseId: number; sets: number; reps: number; restSeconds?: number }, i: number) => ({
+      workoutId,
+      exerciseId: e.exerciseId,
+      sets: e.sets ?? 3,
+      reps: e.reps ?? 10,
+      restSeconds: e.restSeconds ?? 60,
+      orderIndex: i,
+    }))
+  ).returning();
+
+  res.status(201).json(rows);
+});
+
 router.delete("/workouts/:id", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteWorkoutParams.safeParse(req.params);
   if (!params.success) {

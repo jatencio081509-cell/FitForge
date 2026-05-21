@@ -14,6 +14,8 @@ import LogWorkout from "@/pages/log-workout";
 import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
 import AccountSettings from "@/pages/account-settings";
+import Running from "@/pages/running";
+import Friends from "@/pages/friends";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -46,6 +48,8 @@ function AppRoutes() {
       <Route path="/progress" component={() => <ProtectedRoute component={Progress} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
       <Route path="/settings" component={() => <ProtectedRoute component={AccountSettings} />} />
+      <Route path="/running" component={() => <ProtectedRoute component={Running} />} />
+      <Route path="/friends" component={() => <ProtectedRoute component={Friends} />} />
       <Route component={NotFound} />
     </Switch>
   );

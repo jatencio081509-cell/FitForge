@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth";
+import { useTheme, THEMES } from "@/components/theme-provider";
 import {
   User, Shield, Ruler, Dumbbell, Bell, Palette, Lock, Database,
   AlertTriangle, Download, Check, Moon, Sun, Monitor, Activity,
@@ -65,6 +66,7 @@ export default function AccountSettings() {
   const queryClient = useQueryClient();
   const { data: profile } = useGetProfile();
   const updateProfile = useUpdateProfile();
+  const { theme: currentTheme, setTheme } = useTheme();
 
   const prefs = loadPrefs();
 
@@ -367,27 +369,48 @@ export default function AccountSettings() {
         {/* ── Section 6: Appearance ─────────────────────────────────────── */}
         <Card className="bg-card/50 backdrop-blur border-border">
           <CardContent className="p-6">
-            <SectionHeader icon={Palette} title="Appearance" description="Customize how FitForge looks and feels" />
-            <div className="space-y-4">
+            <SectionHeader icon={Palette} title="Appearance" description="Choose a color theme — changes apply instantly" />
+            <div className="space-y-5">
+              {/* Theme Grid */}
               <div className="space-y-2">
-                <Label>Theme</Label>
-                <div className="flex gap-3">
-                  {[
-                    { value: "dark", label: "Dark", icon: Moon },
-                    { value: "light", label: "Light", icon: Sun },
-                    { value: "system", label: "System", icon: Monitor },
-                  ].map(({ value, label, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setAppearancePrefs({ ...appearancePrefs, theme: value })}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${appearancePrefs.theme === value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                    >
-                      <Icon className="w-4 h-4" />{label}
-                    </button>
-                  ))}
+                <Label>Color Theme</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {THEMES.map(t => {
+                    const isActive = currentTheme === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTheme(t.id)}
+                        className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-left ${
+                          isActive
+                            ? "border-primary bg-primary/10 text-foreground shadow-sm shadow-primary/20"
+                            : "border-border text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
+                        }`}
+                      >
+                        {/* Swatch */}
+                        <span
+                          className="w-6 h-6 rounded-lg shrink-0 border border-black/10"
+                          style={{ background: `linear-gradient(135deg, ${t.bg} 50%, ${t.primary})` }}
+                        />
+                        <span className="truncate leading-tight">
+                          {t.label}
+                          {!t.dark && <span className="block text-[10px] text-muted-foreground font-normal">Light</span>}
+                        </span>
+                        {isActive && (
+                          <span className="ml-auto shrink-0">
+                            <Check className="w-3.5 h-3.5 text-primary" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">Theme is saved automatically when you click it.</p>
               </div>
+
+              <Separator />
+
               <div className="divide-y divide-border">
                 <SettingRow label="Compact Mode" description="Reduce spacing for a denser layout">
                   <Switch checked={appearancePrefs.compactMode} onCheckedChange={v => setAppearancePrefs({ ...appearancePrefs, compactMode: v })} />

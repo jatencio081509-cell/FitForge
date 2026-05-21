@@ -6,3 +6,5 @@ export * from "./user_profile";
 export * from "./weight_logs";
 export * from "./conversations";
 export * from "./messages";
+export * from "./run_logs";
+export * from "./friends";

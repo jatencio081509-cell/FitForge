@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Activity, Dumbbell, CalendarRange, LineChart,
-  User, LayoutDashboard, Menu, X, Settings,
+  User, LayoutDashboard, Menu, X, Settings, Timer, Users,
 } from "lucide-react";
 
 const navItems = [
@@ -10,7 +10,9 @@ const navItems = [
   { href: "/workouts", label: "Workouts", icon: CalendarRange },
   { href: "/exercises", label: "Exercises", icon: Dumbbell },
   { href: "/log", label: "Log", icon: Activity },
+  { href: "/running", label: "Running", icon: Timer },
   { href: "/progress", label: "Progress", icon: LineChart },
+  { href: "/friends", label: "Friends", icon: Users },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

@@ -7,6 +7,7 @@ import {
   useGetProfile, getGetProfileQueryKey,
   useUpdateProfile,
   useListWorkoutLogs, getListWorkoutLogsQueryKey,
+  useDeleteWorkoutLog,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, ReferenceLine, Dot,
 } from "recharts";
-import { Trophy, TrendingUp, Scale, Target, Loader2, TrendingDown, Flame } from "lucide-react";
+import { Trophy, TrendingUp, Scale, Target, Loader2, TrendingDown, Flame, Trash2, Dumbbell, Clock } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -256,6 +257,104 @@ function WeightChart() {
   );
 }
 
+// ── Workout Logs (with delete) ────────────────────────────────────────────────
+
+function WorkoutLogsSection() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: logs, isLoading } = useListWorkoutLogs({ limit: 100 }, {
+    query: { queryKey: getListWorkoutLogsQueryKey({ limit: 100 }) },
+  });
+  const deleteLog = useDeleteWorkoutLog();
+  const [showAll, setShowAll] = useState(false);
+
+  const displayed = useMemo(() => {
+    if (!logs) return [];
+    const sorted = [...logs].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+    return showAll ? sorted : sorted.slice(0, 8);
+  }, [logs, showAll]);
+
+  const handleDelete = (id: number) => {
+    deleteLog.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListWorkoutLogsQueryKey({ limit: 100 }) });
+        queryClient.invalidateQueries({ queryKey: getListWorkoutLogsQueryKey({ limit: 500 }) });
+        toast({ title: "Workout log deleted" });
+      },
+      onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
+    });
+  };
+
+  return (
+    <Card className="bg-card/50 backdrop-blur border-border">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Dumbbell className="w-5 h-5 text-primary" />
+            Workout Log History
+          </CardTitle>
+          {logs && logs.length > 0 && (
+            <span className="text-sm text-muted-foreground">{logs.length} session{logs.length !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-14 bg-muted/30 rounded-xl animate-pulse" />)}
+          </div>
+        ) : displayed.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
+            <p className="text-sm">No workout logs yet. Start logging your sessions!</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {displayed.map(log => {
+              const date = new Date(log.completedAt);
+              const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+              return (
+                <div key={log.id} className="flex items-center gap-3 px-4 py-3 bg-muted/20 border border-border rounded-xl group hover:border-primary/20 transition-colors">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{(log as { workoutName?: string }).workoutName ?? "Workout"}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                      <span>{dateStr} · {timeStr}</span>
+                      {(log as { durationMinutes?: number }).durationMinutes && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />{(log as { durationMinutes?: number }).durationMinutes} min
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(log.id)}
+                    disabled={deleteLog.isPending}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+            {logs && logs.length > 8 && (
+              <button
+                onClick={() => setShowAll(v => !v)}
+                className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-xl border border-dashed border-border hover:border-primary/30"
+              >
+                {showAll ? "Show less" : `Show all ${logs.length} sessions`}
+              </button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function Progress() {
@@ -272,6 +371,7 @@ export default function Progress() {
 
         <div className="space-y-6">
           <CalendarHeatmap />
+          <WorkoutLogsSection />
           <WeightChart />
 
           <Card className="bg-card/50 backdrop-blur border-border">

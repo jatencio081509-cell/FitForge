@@ -124,6 +124,18 @@ function ClassicTabLayout() {
             ),
         }}
       />
+      <Tabs.Screen
+        name="running"
+        options={{
+          title: "Running",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="figure.run" tintColor={color} size={22} />
+            ) : (
+              <Feather name="navigation" size={22} color={color} />
+            ),
+        }}
+      />
     </Tabs>
   );
 }
