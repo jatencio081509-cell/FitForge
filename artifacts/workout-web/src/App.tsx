@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
-import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Workouts from "@/pages/workouts";
 import WorkoutDetail from "@/pages/workout-detail";
@@ -18,10 +16,7 @@ import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
 import AccountSettings from "@/pages/account-settings";
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
@@ -31,10 +26,6 @@ function stripBase(path: string): string {
   return basePath && path.startsWith(basePath)
     ? path.slice(basePath.length) || "/"
     : path;
-}
-
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
 }
 
 const queryClient = new QueryClient({
@@ -125,21 +116,20 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-function HomeRedirect() {
+function AppRoutes() {
   return (
-    <>
-      <Show when="signed-in"><Redirect to="/dashboard" /></Show>
-      <Show when="signed-out"><Landing /></Show>
-    </>
-  );
-}
-
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  return (
-    <>
-      <Show when="signed-in"><Component /></Show>
-      <Show when="signed-out"><Redirect to="/" /></Show>
-    </>
+    <Switch>
+      <Route path="/" component={() => <Redirect to="/dashboard" />} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/workouts" component={Workouts} />
+      <Route path="/workouts/:id" component={WorkoutDetail} />
+      <Route path="/exercises" component={Exercises} />
+      <Route path="/log" component={LogWorkout} />
+      <Route path="/progress" component={Progress} />
+      <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={AccountSettings} />
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
@@ -148,7 +138,7 @@ function ClerkProviderWithRoutes() {
 
   return (
     <ClerkProvider
-      publishableKey={clerkPubKey}
+      publishableKey={clerkPubKey!}
       proxyUrl={clerkProxyUrl}
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
@@ -165,17 +155,62 @@ function ClerkProviderWithRoutes() {
         <ThemeProvider defaultTheme="dark" storageKey="fitforge-theme">
           <TooltipProvider>
             <Switch>
-              <Route path="/" component={HomeRedirect} />
+              <Route path="/" component={() => (
+                <>
+                  <Show when="signed-in"><Redirect to="/dashboard" /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
-              <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-              <Route path="/workouts" component={() => <ProtectedRoute component={Workouts} />} />
-              <Route path="/workouts/:id" component={() => <ProtectedRoute component={WorkoutDetail} />} />
-              <Route path="/exercises" component={() => <ProtectedRoute component={Exercises} />} />
-              <Route path="/log" component={() => <ProtectedRoute component={LogWorkout} />} />
-              <Route path="/progress" component={() => <ProtectedRoute component={Progress} />} />
-              <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
-              <Route path="/settings" component={() => <ProtectedRoute component={AccountSettings} />} />
+              <Route path="/dashboard" component={() => (
+                <>
+                  <Show when="signed-in"><Dashboard /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/workouts" component={() => (
+                <>
+                  <Show when="signed-in"><Workouts /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/workouts/:id" component={() => (
+                <>
+                  <Show when="signed-in"><WorkoutDetail /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/exercises" component={() => (
+                <>
+                  <Show when="signed-in"><Exercises /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/log" component={() => (
+                <>
+                  <Show when="signed-in"><LogWorkout /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/progress" component={() => (
+                <>
+                  <Show when="signed-in"><Progress /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/profile" component={() => (
+                <>
+                  <Show when="signed-in"><Profile /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
+              <Route path="/settings" component={() => (
+                <>
+                  <Show when="signed-in"><AccountSettings /></Show>
+                  <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+                </>
+              )} />
               <Route component={NotFound} />
             </Switch>
             <Toaster />
@@ -186,10 +221,23 @@ function ClerkProviderWithRoutes() {
   );
 }
 
+function NoAuthApp() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="dark" storageKey="fitforge-theme">
+        <TooltipProvider>
+          <AppRoutes />
+          <Toaster />
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
 function App() {
   return (
     <WouterRouter base={basePath}>
-      <ClerkProviderWithRoutes />
+      {clerkPubKey ? <ClerkProviderWithRoutes /> : <NoAuthApp />}
     </WouterRouter>
   );
 }
