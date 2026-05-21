@@ -38,20 +38,20 @@ function ExerciseDetailDialog({ exercise, children }: { exercise: Exercise; chil
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-xl pr-4">{exercise.name}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-5">
-          {/* Tags */}
-          <div className="flex flex-wrap gap-2">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+        {/* Fixed header */}
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0 border-b border-border">
+          <DialogTitle className="text-xl pr-8">{exercise.name}</DialogTitle>
+          <div className="flex flex-wrap gap-2 pt-2">
             <Badge variant="secondary" className="capitalize">{exercise.muscleGroup.replace("_", " ")}</Badge>
             <Badge variant="outline" className="capitalize">{exercise.equipment}</Badge>
             <Badge variant="outline" className="capitalize">{exercise.category}</Badge>
             {exercise.isCustom && <Badge>Custom</Badge>}
           </div>
+        </DialogHeader>
 
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
           {/* 3D Muscle figure */}
           <div className="flex justify-center py-2 bg-muted/20 rounded-2xl border border-border">
             <MuscleFigure3D activeMuscles={[exercise.muscleGroup]} size={200} autoRotate />
