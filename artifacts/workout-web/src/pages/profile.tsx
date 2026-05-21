@@ -206,7 +206,7 @@ export default function Profile() {
       <div className="max-w-3xl mx-auto space-y-8 pb-12">
         <div>
           <h1 className="text-4xl font-bold tracking-tight mb-2">Profile & Goals</h1>
-          <p className="text-muted-foreground text-lg">Tune your metrics to improve AI recommendations.</p>
+          <p className="text-muted-foreground text-lg">Track your body metrics and set your fitness goals.</p>
         </div>
 
         {/* Weight goal tracker */}
