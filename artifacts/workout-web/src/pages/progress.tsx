@@ -6,6 +6,7 @@ import {
   useCreateWeightLog,
   useGetProfile, getGetProfileQueryKey,
   useUpdateProfile,
+  useListWorkoutLogs, getListWorkoutLogsQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,10 +15,135 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, ReferenceLine, Dot,
 } from "recharts";
-import { Trophy, TrendingUp, Scale, Target, Loader2, TrendingDown } from "lucide-react";
-import { useState } from "react";
+import { Trophy, TrendingUp, Scale, Target, Loader2, TrendingDown, Flame } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+
+// ── Calendar Heatmap ────────────────────────────────────────────────────────
+
+function CalendarHeatmap() {
+  const { data: logs } = useListWorkoutLogs({ limit: 500 }, {
+    query: { queryKey: getListWorkoutLogsQueryKey({ limit: 500 }) },
+  });
+
+  const { workoutDates, weeks } = useMemo(() => {
+    const dateSet = new Set<string>();
+    if (logs) {
+      for (const log of logs) {
+        const d = new Date(log.completedAt);
+        dateSet.add(d.toISOString().slice(0, 10));
+      }
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Build 16 weeks of days ending today
+    const endDate = new Date(today);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 16 * 7 + 1);
+
+    // Align start to Monday
+    const dayOfWeek = startDate.getDay(); // 0=Sun
+    const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    startDate.setDate(startDate.getDate() + offset);
+
+    const weeksArr: Array<Array<{ date: Date; iso: string; inRange: boolean }>> = [];
+    let current = new Date(startDate);
+    while (current <= endDate) {
+      const week: Array<{ date: Date; iso: string; inRange: boolean }> = [];
+      for (let d = 0; d < 7; d++) {
+        const iso = current.toISOString().slice(0, 10);
+        week.push({ date: new Date(current), iso, inRange: current <= today });
+        current.setDate(current.getDate() + 1);
+      }
+      weeksArr.push(week);
+    }
+
+    return { workoutDates: dateSet, weeks: weeksArr };
+  }, [logs]);
+
+  const totalWorkouts = workoutDates.size;
+  const months = useMemo(() => {
+    const seen = new Set<string>();
+    return weeks.map(week => {
+      const label = new Date(week[0].date).toLocaleDateString("en-US", { month: "short" });
+      if (seen.has(label)) return null;
+      seen.add(label);
+      return label;
+    });
+  }, [weeks]);
+
+  return (
+    <Card className="bg-card/50 backdrop-blur border-border">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Flame className="w-5 h-5 text-orange-500" />
+            Workout Activity
+          </CardTitle>
+          <span className="text-sm text-muted-foreground">{totalWorkouts} session{totalWorkouts !== 1 ? "s" : ""} logged</span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto pb-2">
+          {/* Month labels */}
+          <div className="flex gap-1.5 mb-1 ml-7">
+            {weeks.map((_, i) => (
+              <div key={i} className="w-4 text-[10px] text-muted-foreground shrink-0 text-center">
+                {months[i] ?? ""}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            {/* Day labels */}
+            <div className="flex flex-col gap-1.5 mr-1">
+              {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map(d => (
+                <div key={d} className="w-5 h-4 text-[10px] text-muted-foreground/60 flex items-center justify-end pr-1">
+                  {d}
+                </div>
+              ))}
+            </div>
+            {/* Calendar grid */}
+            {weeks.map((week, wi) => (
+              <div key={wi} className="flex flex-col gap-1.5">
+                {week.map(({ iso, inRange }) => {
+                  const hasWorkout = workoutDates.has(iso);
+                  return (
+                    <div
+                      key={iso}
+                      title={hasWorkout ? `Workout on ${iso}` : iso}
+                      className="w-4 h-4 rounded-sm transition-all"
+                      style={{
+                        backgroundColor: !inRange
+                          ? "transparent"
+                          : hasWorkout
+                          ? "hsl(var(--primary))"
+                          : "hsl(var(--border))",
+                        opacity: inRange ? 1 : 0,
+                        boxShadow: hasWorkout ? "0 0 4px hsl(var(--primary) / 0.5)" : "none",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+          <span>Less</span>
+          <div className="w-3 h-3 rounded-sm bg-border" />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "hsl(var(--primary) / 0.4)" }} />
+          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "hsl(var(--primary))" }} />
+          <span>More</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Weight Chart ─────────────────────────────────────────────────────────────
 
 function WeightChart() {
   const { data: weightLogs, isLoading } = useListWeightLogs({ query: { queryKey: getListWeightLogsQueryKey() } });
@@ -26,20 +152,16 @@ function WeightChart() {
   const updateProfile = useUpdateProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-
   const [newWeight, setNewWeight] = useState("");
 
   const unit = profile?.weightUnit ?? "kg";
   const goalWeight = profile?.weightGoal;
 
   const chartData = weightLogs
-    ? [...weightLogs]
-        .reverse()
-        .map((log) => ({
-          date: new Date(log.loggedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          weight: log.weight,
-          fullDate: log.loggedAt,
-        }))
+    ? [...weightLogs].reverse().map(log => ({
+        date: new Date(log.loggedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        weight: log.weight,
+      }))
     : [];
 
   const latest = weightLogs?.[0]?.weight;
@@ -66,61 +188,42 @@ function WeightChart() {
             Body Weight History
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              step="0.1"
-              placeholder={`Log weight (${unit})`}
-              value={newWeight}
-              onChange={(e) => setNewWeight(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLog()}
-              className="bg-background w-44 h-9 text-sm"
-            />
-            <Button
-              size="sm"
-              onClick={handleLog}
-              disabled={createWeightLog.isPending || !newWeight}
-              className="h-9"
-            >
+            <Input type="number" step="0.1" placeholder={`Log weight (${unit})`} value={newWeight}
+              onChange={e => setNewWeight(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleLog()}
+              className="bg-background w-44 h-9 text-sm" />
+            <Button size="sm" onClick={handleLog} disabled={createWeightLog.isPending || !newWeight} className="h-9">
               {createWeightLog.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Log"}
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {/* Summary stats */}
         <div className="grid grid-cols-3 gap-3 mb-6 mt-2">
           <div className="p-3 rounded-xl bg-background border border-border text-center">
             <p className="text-[11px] text-muted-foreground mb-0.5">Current</p>
-            <p className="text-xl font-bold">{latest != null ? `${latest}` : "—"}</p>
+            <p className="text-xl font-bold">{latest ?? "—"}</p>
             <p className="text-[11px] text-muted-foreground">{unit}</p>
           </div>
           <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-center">
-            <p className="text-[11px] text-muted-foreground mb-0.5 flex items-center justify-center gap-1">
-              <Target className="w-3 h-3" /> Goal
-            </p>
-            <p className="text-xl font-bold text-primary">{goalWeight != null ? `${goalWeight}` : "—"}</p>
+            <p className="text-[11px] text-muted-foreground mb-0.5 flex items-center justify-center gap-1"><Target className="w-3 h-3" /> Goal</p>
+            <p className="text-xl font-bold text-primary">{goalWeight ?? "—"}</p>
             <p className="text-[11px] text-muted-foreground">{unit}</p>
           </div>
           <div className="p-3 rounded-xl bg-background border border-border text-center">
             <p className="text-[11px] text-muted-foreground mb-0.5">Change</p>
             {diff !== null ? (
               <div className="flex items-center justify-center gap-1">
-                {diff < 0
-                  ? <TrendingDown className="w-4 h-4 text-green-500" />
-                  : <TrendingUp className="w-4 h-4 text-yellow-500" />}
+                {diff < 0 ? <TrendingDown className="w-4 h-4 text-green-500" /> : <TrendingUp className="w-4 h-4 text-yellow-500" />}
                 <p className="text-xl font-bold" style={{ color: diff < 0 ? "#22c55e" : "#f59e0b" }}>
                   {diff > 0 ? "+" : ""}{diff.toFixed(1)}
                 </p>
               </div>
-            ) : (
-              <p className="text-xl font-bold text-muted-foreground">—</p>
-            )}
+            ) : <p className="text-xl font-bold text-muted-foreground">—</p>}
             <p className="text-[11px] text-muted-foreground">{unit}</p>
           </div>
         </div>
-
-        {/* Chart */}
-        <div className="h-[280px] w-full">
+        <div className="h-[240px] w-full">
           {isLoading ? (
             <div className="w-full h-full bg-accent/5 rounded animate-pulse" />
           ) : chartData.length < 2 ? (
@@ -132,45 +235,18 @@ function WeightChart() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-                <XAxis
-                  dataKey="date"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={["auto", "auto"]}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                  itemStyle={{ color: "hsl(var(--foreground))" }}
-                  labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
-                  formatter={(value: number) => [`${value} ${unit}`, "Weight"]}
-                />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                  itemStyle={{ color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
+                  formatter={(v: number) => [`${v} ${unit}`, "Weight"]} />
                 {goalWeight != null && (
-                  <ReferenceLine
-                    y={goalWeight}
-                    stroke="hsl(var(--primary))"
-                    strokeDasharray="6 3"
-                    strokeOpacity={0.6}
-                    label={{ value: `Goal: ${goalWeight}${unit}`, fill: "hsl(var(--primary))", fontSize: 11, position: "insideTopRight" }}
-                  />
+                  <ReferenceLine y={goalWeight} stroke="hsl(var(--primary))" strokeDasharray="6 3" strokeOpacity={0.6}
+                    label={{ value: `Goal: ${goalWeight}${unit}`, fill: "hsl(var(--primary))", fontSize: 11, position: "insideTopRight" }} />
                 )}
-                <Line
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2.5}
+                <Line type="monotone" dataKey="weight" stroke="hsl(var(--primary))" strokeWidth={2.5}
                   dot={<Dot r={4} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2} />}
-                  activeDot={{ r: 6, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
-                />
+                  activeDot={{ r: 6, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -179,6 +255,8 @@ function WeightChart() {
     </Card>
   );
 }
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function Progress() {
   const { data: weekly, isLoading: loadingWeekly } = useGetWeeklyProgress({ query: { queryKey: getGetWeeklyProgressQueryKey() } });
@@ -193,10 +271,9 @@ export default function Progress() {
         </div>
 
         <div className="space-y-6">
-          {/* Weight tracking */}
+          <CalendarHeatmap />
           <WeightChart />
 
-          {/* Volume trends */}
           <Card className="bg-card/50 backdrop-blur border-border">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl flex items-center gap-2">
@@ -211,20 +288,11 @@ export default function Progress() {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={weekly ? [...weekly].reverse() : []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <XAxis
-                        dataKey="week"
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                      />
+                      <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false}
+                        tickFormatter={val => new Date(val).toLocaleDateString(undefined, { month: "short", day: "numeric" })} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                        itemStyle={{ color: "hsl(var(--foreground))" }}
-                        labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                        itemStyle={{ color: "hsl(var(--foreground))" }} labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: "4px" }} />
                       <Bar dataKey="totalVolume" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -233,7 +301,6 @@ export default function Progress() {
             </CardContent>
           </Card>
 
-          {/* Personal records */}
           <Card className="bg-card/50 backdrop-blur border-border">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">

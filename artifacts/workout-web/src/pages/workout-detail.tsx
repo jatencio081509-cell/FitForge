@@ -4,9 +4,15 @@ import { useGetWorkout, getGetWorkoutQueryKey, useCreateWorkoutLog } from "@work
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Play, Dumbbell, Clock, Layers, Activity, CheckCircle2, Circle, Star, Timer, Trophy, Square } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  ChevronLeft, Play, Dumbbell, Clock, Layers, Activity, CheckCircle2, Circle,
+  Star, Timer, Trophy, Square, Share2, Copy, Check
+} from "lucide-react";
 import { Link } from "wouter";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MuscleFigure, getMusclesForWorkout } from "@/components/muscle-figure";
+import { useToast } from "@/hooks/use-toast";
 
 type SetState = "idle" | "done";
 
@@ -16,13 +22,121 @@ function formatTime(secs: number) {
   return `${m}:${s}`;
 }
 
+type WorkoutExercise = {
+  id: number;
+  exerciseId: number;
+  exerciseName?: string;
+  muscleGroup?: string | null;
+  equipment?: string | null;
+  sets: number;
+  reps: number;
+  weight?: number | null;
+  restSeconds?: number | null;
+  notes?: string | null;
+  orderIndex: number;
+};
+
+function ExerciseInfoDialog({
+  exercise,
+  open,
+  onClose,
+}: {
+  exercise: WorkoutExercise | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!exercise) return null;
+  return (
+    <Dialog open={open} onOpenChange={v => !v && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{exercise.exerciseName}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {exercise.muscleGroup && (
+              <Badge variant="secondary" className="capitalize">{exercise.muscleGroup.replace("_", " ")}</Badge>
+            )}
+            {exercise.equipment && (
+              <Badge variant="outline" className="capitalize">{exercise.equipment}</Badge>
+            )}
+          </div>
+          {exercise.muscleGroup && (
+            <div className="flex justify-center py-2">
+              <MuscleFigure activeMuscles={[exercise.muscleGroup]} size={130} />
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 bg-background rounded-xl border border-border">
+              <div className="text-2xl font-black text-primary">{exercise.sets}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Sets</div>
+            </div>
+            <div className="text-center p-3 bg-background rounded-xl border border-border">
+              <div className="text-2xl font-black text-primary">{exercise.reps}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Reps</div>
+            </div>
+            <div className="text-center p-3 bg-background rounded-xl border border-border">
+              <div className="text-2xl font-black text-muted-foreground">{exercise.restSeconds ?? 60}s</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">Rest</div>
+            </div>
+          </div>
+          {exercise.notes && (
+            <p className="text-sm text-muted-foreground bg-accent/10 rounded-lg p-3">{exercise.notes}</p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ShareButton({ workout }: { workout: { name: string; description?: string | null; estimatedMinutes: number; exercises: WorkoutExercise[] } }) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const buildShareText = () => {
+    const lines = [
+      `🏋️ ${workout.name}`,
+      workout.description ? `📋 ${workout.description}` : null,
+      `⏱️ ${workout.estimatedMinutes} min · ${workout.exercises.length} exercises`,
+      ``,
+      `💪 Exercises:`,
+      ...workout.exercises.map((ex, i) => `  ${i + 1}. ${ex.exerciseName} — ${ex.sets}×${ex.reps}`),
+      ``,
+      `🔥 Tracked with FitForge`,
+    ].filter(l => l !== null);
+    return lines.join("\n");
+  };
+
+  const handleShare = async () => {
+    const text = buildShareText();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: workout.name, text });
+        return;
+      } catch {}
+    }
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast({ title: "Workout copied to clipboard!" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={handleShare} className="gap-2 h-9">
+      {copied ? <Check className="w-4 h-4 text-primary" /> : <Share2 className="w-4 h-4" />}
+      {copied ? "Copied!" : "Share"}
+    </Button>
+  );
+}
+
 export default function WorkoutDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const workoutId = Number(id);
 
   const { data: workout, isLoading } = useGetWorkout(workoutId, {
-    query: { enabled: !!workoutId, queryKey: getGetWorkoutQueryKey(workoutId) }
+    query: { enabled: !!workoutId, queryKey: getGetWorkoutQueryKey(workoutId) },
   });
 
   const createLog = useCreateWorkoutLog();
@@ -33,6 +147,7 @@ export default function WorkoutDetail() {
   const [showFinish, setShowFinish] = useState(false);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
+  const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startSession = useCallback(() => {
@@ -66,7 +181,7 @@ export default function WorkoutDetail() {
         durationMinutes: Math.max(1, Math.round(elapsed / 60)),
         notes: notes || undefined,
         rating: rating || undefined,
-      }
+      },
     });
     navigate("/workouts");
   };
@@ -77,7 +192,7 @@ export default function WorkoutDetail() {
         <div className="max-w-4xl mx-auto space-y-6 animate-pulse">
           <div className="h-8 w-48 bg-card rounded" />
           <div className="h-32 bg-card rounded-xl" />
-          {[1,2,3].map(i => <div key={i} className="h-20 bg-card rounded-xl" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-20 bg-card rounded-xl" />)}
         </div>
       </AppLayout>
     );
@@ -104,14 +219,14 @@ export default function WorkoutDetail() {
             </div>
             <h1 className="text-3xl font-bold">Workout Complete!</h1>
             <p className="text-muted-foreground">
-              You trained for <span className="text-foreground font-semibold">{formatTime(elapsed)}</span> and hit{" "}
+              Trained for <span className="text-foreground font-semibold">{formatTime(elapsed)}</span> and hit{" "}
               <span className="text-foreground font-semibold">{doneSets}/{totalSets}</span> sets.
             </p>
           </div>
           <div className="space-y-3 text-left">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Rate this session</p>
             <div className="flex gap-2">
-              {[1,2,3,4,5].map(n => (
+              {[1, 2, 3, 4, 5].map(n => (
                 <button key={n} onClick={() => setRating(n)} className="transition-transform hover:scale-110">
                   <Star className={`w-8 h-8 ${n <= rating ? "fill-primary text-primary" : "text-muted-foreground"}`} />
                 </button>
@@ -120,11 +235,8 @@ export default function WorkoutDetail() {
           </div>
           <div className="space-y-2 text-left">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Notes (optional)</p>
-            <textarea
-              className="w-full bg-card border border-border rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-              rows={3} placeholder="How did it go?" value={notes}
-              onChange={e => setNotes(e.target.value)}
-            />
+            <textarea className="w-full bg-card border border-border rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              rows={3} placeholder="How did it go?" value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
           <Button size="lg" className="w-full" onClick={finishSession} disabled={createLog.isPending}>
             {createLog.isPending ? "Saving..." : "Save & Finish"}
@@ -158,7 +270,8 @@ export default function WorkoutDetail() {
               <span>{Math.round((doneSets / Math.max(totalSets, 1)) * 100)}%</span>
             </div>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${(doneSets / Math.max(totalSets, 1)) * 100}%` }} />
+              <div className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{ width: `${(doneSets / Math.max(totalSets, 1)) * 100}%` }} />
             </div>
           </div>
           <div className="space-y-4">
@@ -175,8 +288,11 @@ export default function WorkoutDetail() {
                           {allDone ? "✓" : exIdx + 1}
                         </span>
                         <div>
-                          <h3 className="font-semibold">{ex.exerciseName}</h3>
-                          <p className="text-xs text-muted-foreground capitalize">{ex.muscleGroup?.replace("_"," ")} · {ex.equipment}</p>
+                          <button className="font-semibold hover:text-primary transition-colors text-left"
+                            onClick={() => setSelectedExercise(ex as WorkoutExercise)}>
+                            {ex.exerciseName}
+                          </button>
+                          <p className="text-xs text-muted-foreground capitalize">{ex.muscleGroup?.replace("_", " ")} · {ex.equipment}</p>
                         </div>
                       </div>
                       <div className="text-right text-sm">
@@ -206,13 +322,17 @@ export default function WorkoutDetail() {
               );
             })}
           </div>
-          <Button size="lg" variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/10" onClick={() => setShowFinish(true)}>
+          <Button size="lg" variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary/10"
+            onClick={() => setShowFinish(true)}>
             <Square className="w-4 h-4 mr-2" />End Session
           </Button>
+          <ExerciseInfoDialog exercise={selectedExercise} open={!!selectedExercise} onClose={() => setSelectedExercise(null)} />
         </div>
       </AppLayout>
     );
   }
+
+  const activeMuscles = getMusclesForWorkout(workout.exercises ?? []);
 
   return (
     <AppLayout>
@@ -222,29 +342,54 @@ export default function WorkoutDetail() {
             <ChevronLeft className="w-5 h-5 mr-1" />Back to Workouts
           </Link>
         </Button>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-3">
-            <h1 className="text-4xl font-bold tracking-tight">{workout.name}</h1>
+
+        {/* Header + Muscle Figure */}
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          <div className="flex-1 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-4xl font-bold tracking-tight">{workout.name}</h1>
+              {workout.exercises?.length > 0 && (
+                <ShareButton workout={workout} />
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary" className="capitalize text-sm px-3 py-1">{workout.difficulty}</Badge>
               {workout.category && <Badge variant="outline" className="capitalize text-sm px-3 py-1">{workout.category}</Badge>}
             </div>
             {workout.description && <p className="text-lg text-muted-foreground max-w-2xl">{workout.description}</p>}
-          </div>
-          <div className="flex gap-4 p-4 bg-card rounded-xl border border-border min-w-fit">
-            <div className="flex flex-col items-center px-4">
-              <Clock className="w-6 h-6 text-primary mb-1" />
-              <span className="font-bold text-lg">{workout.estimatedMinutes}</span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Mins</span>
+
+            <div className="flex gap-4 p-4 bg-card rounded-xl border border-border w-fit">
+              <div className="flex flex-col items-center px-4">
+                <Clock className="w-6 h-6 text-primary mb-1" />
+                <span className="font-bold text-lg">{workout.estimatedMinutes}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Mins</span>
+              </div>
+              <div className="w-px bg-border my-2" />
+              <div className="flex flex-col items-center px-4">
+                <Layers className="w-6 h-6 text-primary mb-1" />
+                <span className="font-bold text-lg">{workout.exercises?.length || 0}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Exercises</span>
+              </div>
             </div>
-            <div className="w-px bg-border my-2" />
-            <div className="flex flex-col items-center px-4">
-              <Layers className="w-6 h-6 text-primary mb-1" />
-              <span className="font-bold text-lg">{workout.exercises?.length || 0}</span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Exercises</span>
-            </div>
           </div>
+
+          {/* Anatomical muscle figure */}
+          {workout.exercises?.length > 0 && (
+            <div className="flex flex-col items-center gap-2 bg-card/50 rounded-2xl border border-border p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Muscles Worked</p>
+              <MuscleFigure activeMuscles={activeMuscles} size={130} />
+              <div className="flex flex-wrap gap-1 justify-center max-w-[140px]">
+                {activeMuscles.map(m => (
+                  <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium capitalize">
+                    {m.replace("_", " ")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Exercise list */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold tracking-tight">Exercise Routine</h2>
@@ -252,6 +397,7 @@ export default function WorkoutDetail() {
               <Play className="w-5 h-5" />Start Session
             </Button>
           </div>
+
           {!workout.exercises?.length ? (
             <Card className="bg-card/50 border-dashed">
               <CardContent className="p-12 text-center text-muted-foreground">
@@ -262,7 +408,9 @@ export default function WorkoutDetail() {
           ) : (
             <div className="space-y-3">
               {workout.exercises.map((ex, idx) => (
-                <Card key={ex.id} className="bg-card/50 backdrop-blur group hover:border-primary/50 transition-colors">
+                <Card key={ex.id}
+                  className="bg-card/50 backdrop-blur group hover:border-primary/50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedExercise(ex as WorkoutExercise)}>
                   <CardContent className="p-0">
                     <div className="flex items-stretch">
                       <div className="w-14 flex items-center justify-center bg-accent/5 rounded-l-xl border-r border-border shrink-0">
@@ -270,17 +418,41 @@ export default function WorkoutDetail() {
                       </div>
                       <div className="p-5 flex-1 flex flex-col md:flex-row gap-4 md:items-center justify-between">
                         <div>
-                          <h3 className="text-lg font-bold">{ex.exerciseName}</h3>
+                          <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{ex.exerciseName}</h3>
                           <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                            {ex.muscleGroup && <span className="flex items-center gap-1"><Activity className="w-3.5 h-3.5" /><span className="capitalize">{ex.muscleGroup.replace('_',' ')}</span></span>}
-                            {ex.equipment && <span className="flex items-center gap-1"><Dumbbell className="w-3.5 h-3.5" /><span className="capitalize">{ex.equipment}</span></span>}
+                            {ex.muscleGroup && (
+                              <span className="flex items-center gap-1">
+                                <Activity className="w-3.5 h-3.5" />
+                                <span className="capitalize">{ex.muscleGroup.replace("_", " ")}</span>
+                              </span>
+                            )}
+                            {ex.equipment && (
+                              <span className="flex items-center gap-1">
+                                <Dumbbell className="w-3.5 h-3.5" />
+                                <span className="capitalize">{ex.equipment}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-4 bg-background rounded-lg px-4 py-3 border border-border">
-                          <div className="text-center"><div className="text-2xl font-black text-primary">{ex.sets}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Sets</div></div>
-                          <div className="text-center"><div className="text-2xl font-black text-primary">{ex.reps}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Reps</div></div>
-                          {ex.restSeconds != null && <div className="text-center ml-2 pl-4 border-l border-border"><div className="text-xl font-bold text-muted-foreground">{ex.restSeconds}s</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rest</div></div>}
+                          <div className="text-center">
+                            <div className="text-2xl font-black text-primary">{ex.sets}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Sets</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-black text-primary">{ex.reps}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Reps</div>
+                          </div>
+                          {ex.restSeconds != null && (
+                            <div className="text-center ml-2 pl-4 border-l border-border">
+                              <div className="text-xl font-bold text-muted-foreground">{ex.restSeconds}s</div>
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rest</div>
+                            </div>
+                          )}
                         </div>
+                      </div>
+                      <div className="flex items-center pr-4">
+                        <ChevronLeft className="w-4 h-4 text-muted-foreground/30 rotate-180 group-hover:text-primary/50 transition-colors" />
                       </div>
                     </div>
                   </CardContent>
@@ -289,12 +461,15 @@ export default function WorkoutDetail() {
             </div>
           )}
         </div>
+
         {(workout.exercises?.length ?? 0) > 0 && (
           <Button size="lg" onClick={startSession} className="w-full shadow-lg shadow-primary/20 gap-2 h-14 text-base">
             <Play className="w-5 h-5" />Start Session
           </Button>
         )}
       </div>
+
+      <ExerciseInfoDialog exercise={selectedExercise} open={!!selectedExercise} onClose={() => setSelectedExercise(null)} />
     </AppLayout>
   );
 }

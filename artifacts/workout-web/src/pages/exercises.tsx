@@ -10,13 +10,89 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Activity, Dumbbell, Info, Loader2, Plus, Trash2 } from "lucide-react";
+import { Search, Activity, Dumbbell, Info, Loader2, Plus, Trash2, ChevronRight } from "lucide-react";
+import { MuscleFigure } from "@/components/muscle-figure";
 
 const MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "arms", "core", "full_body"];
 const MUSCLE_ICONS: Record<string, string> = {
   chest: "💪", back: "🦾", legs: "🦵", shoulders: "🏋️", arms: "💪", core: "🔥", full_body: "⚡",
 };
 const EQUIPMENT_OPTIONS = ["barbell", "dumbbell", "cable", "machine", "bodyweight", "kettlebell", "other"];
+
+type Exercise = {
+  id: number;
+  name: string;
+  description?: string | null;
+  instructions?: string | null;
+  muscleGroup: string;
+  equipment: string;
+  category: string;
+  isCustom: boolean;
+  createdAt: string;
+  imageUrl?: string | null;
+};
+
+function ExerciseDetailDialog({ exercise, children }: { exercise: Exercise; children: React.ReactNode }) {
+  const steps = exercise.instructions?.split("\n").filter(Boolean) ?? [];
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl pr-4">{exercise.name}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          {/* Tags */}
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="capitalize">{exercise.muscleGroup.replace("_", " ")}</Badge>
+            <Badge variant="outline" className="capitalize">{exercise.equipment}</Badge>
+            <Badge variant="outline" className="capitalize">{exercise.category}</Badge>
+            {exercise.isCustom && <Badge>Custom</Badge>}
+          </div>
+
+          {/* Muscle figure */}
+          <div className="flex justify-center py-2">
+            <MuscleFigure activeMuscles={[exercise.muscleGroup]} size={130} />
+          </div>
+
+          {/* Description */}
+          {exercise.description && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">About</p>
+              <p className="text-sm text-foreground leading-relaxed">{exercise.description}</p>
+            </div>
+          )}
+
+          {/* Instructions */}
+          {steps.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">How to perform</p>
+              <ol className="space-y-2">
+                {steps.map((step, i) => {
+                  const text = step.replace(/^\d+\.\s*/, "");
+                  return (
+                    <li key={i} className="flex gap-3 text-sm">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="text-foreground/90 leading-relaxed">{text}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
+
+          {!exercise.description && steps.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No detailed instructions available for this exercise yet.</p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Exercises() {
   const [search, setSearch] = useState("");
@@ -27,7 +103,6 @@ export default function Exercises() {
     name: "", muscleGroup: "chest", equipment: "bodyweight",
     category: "strength", description: "",
   });
-
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const createExercise = useCreateExercise();
@@ -50,11 +125,11 @@ export default function Exercises() {
   const queryParams = {
     ...(search ? { search } : {}),
     ...(muscle !== "all" ? { muscle } : {}),
-    ...(category !== "all" ? { category } : {})
+    ...(category !== "all" ? { category } : {}),
   };
 
   const { data: exercises, isLoading } = useListExercises(queryParams, {
-    query: { queryKey: getListExercisesQueryKey(queryParams) }
+    query: { queryKey: getListExercisesQueryKey(queryParams) },
   });
 
   const handleCreateExercise = async (e: React.FormEvent) => {
@@ -64,8 +139,6 @@ export default function Exercises() {
     setIsCreateOpen(false);
     setCreateForm({ name: "", muscleGroup: "chest", equipment: "bodyweight", category: "strength", description: "" });
   };
-
-  const displayExercises = exercises;
 
   return (
     <AppLayout>
@@ -78,15 +151,10 @@ export default function Exercises() {
           </div>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 shrink-0">
-                <Plus className="w-4 h-4" />
-                Add Exercise
-              </Button>
+              <Button className="gap-2 shrink-0"><Plus className="w-4 h-4" />Add Exercise</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Custom Exercise</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Create Custom Exercise</DialogTitle></DialogHeader>
               <form onSubmit={handleCreateExercise} className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <Label>Name</Label>
@@ -147,14 +215,13 @@ export default function Exercises() {
 
         {/* Muscle group quick-select */}
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setMuscle("all")}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${muscle === "all" ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}
-          >All</button>
+          <button onClick={() => setMuscle("all")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${muscle === "all" ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}>
+            All
+          </button>
           {MUSCLE_GROUPS.map(mg => (
             <button key={mg} onClick={() => setMuscle(mg)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5 ${muscle === mg ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}
-            >
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5 ${muscle === mg ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}>
               <span>{MUSCLE_ICONS[mg]}</span>
               <span className="capitalize">{mg.replace("_", " ")}</span>
             </button>
@@ -174,59 +241,61 @@ export default function Exercises() {
               <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="strength">Strength</SelectItem>
               <SelectItem value="cardio">Cardio</SelectItem>
-              <SelectItem value="flexibility">Flexibility</SelectItem>
-              <SelectItem value="sports">Sports</SelectItem>
+              <SelectItem value="core">Core</SelectItem>
+              <SelectItem value="mobility">Mobility</SelectItem>
+              <SelectItem value="plyometrics">Plyometrics</SelectItem>
+              <SelectItem value="olympic">Olympic</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Exercise grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-28 bg-card rounded-xl animate-pulse" />
-            ))
-          ) : displayExercises?.map((exercise) => (
-            <Card key={exercise.id}
-              className="bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40"
-            >
-              <CardContent className="p-4 flex gap-3 items-center">
-                <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 border border-border group-hover:border-primary/30 transition-colors text-xl">
-                  {MUSCLE_ICONS[exercise.muscleGroup] ?? "🏋️"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <h3 className="font-semibold truncate">{exercise.name}</h3>
-                    {exercise.isCustom && <Badge variant="outline" className="text-xs shrink-0">Custom</Badge>}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mb-1.5">
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
-                      <Activity className="w-3 h-3" /><span className="capitalize">{exercise.muscleGroup.replace("_", " ")}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
-                      <Dumbbell className="w-3 h-3" /><span className="capitalize">{exercise.equipment}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
-                      <Info className="w-3 h-3" /><span className="capitalize">{exercise.category}</span>
-                    </span>
-                  </div>
-                  {exercise.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-1">{exercise.description}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleDeleteExercise(exercise.id)}
-                  disabled={deletingId === exercise.id}
-                  className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  {deletingId === exercise.id
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <Trash2 className="w-3.5 h-3.5" />}
-                </button>
-              </CardContent>
-            </Card>
-          ))}
-          {displayExercises?.length === 0 && (
+          {isLoading
+            ? Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-28 bg-card rounded-xl animate-pulse" />)
+            : exercises?.map(exercise => (
+              <ExerciseDetailDialog key={exercise.id} exercise={exercise as Exercise}>
+                <Card className="bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40 cursor-pointer">
+                  <CardContent className="p-4 flex gap-3 items-center">
+                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 border border-border group-hover:border-primary/30 transition-colors text-xl">
+                      {MUSCLE_ICONS[exercise.muscleGroup] ?? "🏋️"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h3 className="font-semibold truncate">{exercise.name}</h3>
+                        {exercise.isCustom && <Badge variant="outline" className="text-xs shrink-0">Custom</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-1.5">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                          <Activity className="w-3 h-3" /><span className="capitalize">{exercise.muscleGroup.replace("_", " ")}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                          <Dumbbell className="w-3 h-3" /><span className="capitalize">{exercise.equipment}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                          <Info className="w-3 h-3" /><span className="capitalize">{exercise.category}</span>
+                        </span>
+                      </div>
+                      {exercise.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{exercise.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDeleteExercise(exercise.id); }}
+                        disabled={deletingId === exercise.id}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100">
+                        {deletingId === exercise.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </ExerciseDetailDialog>
+            ))}
+          {exercises?.length === 0 && (
             <div className="col-span-full py-16 text-center text-muted-foreground">
               <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
               <p>No exercises found. Try a different search or create your own.</p>

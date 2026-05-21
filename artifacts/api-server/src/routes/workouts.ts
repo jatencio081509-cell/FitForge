@@ -78,7 +78,10 @@ router.get("/workouts/:id", requireAuth, async (req, res): Promise<void> => {
   const [workout] = await db
     .select()
     .from(workoutsTable)
-    .where(and(eq(workoutsTable.id, params.data.id), eq(workoutsTable.userId, req.userId!)));
+    .where(and(
+      eq(workoutsTable.id, params.data.id),
+      sql`(${workoutsTable.userId} IS NULL OR ${workoutsTable.userId} = ${req.userId!})`
+    ));
 
   if (!workout) {
     res.status(404).json({ error: "Workout not found" });
