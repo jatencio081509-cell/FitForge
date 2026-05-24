@@ -20,7 +20,11 @@ config.resolver.nodeModulesPaths = [
 // descending into those paths at all.
 const existingBlockList = config.resolver.blockList;
 config.resolver.blockList = [
+  // Block postinstall temp dirs (e.g. @expo/vector-icons during pnpm install)
   /node_modules[/\\].*_tmp_\d+[/\\]/,
+  // Block Replit internal skill/agent directories — they contain stale paths
+  // that Metro's FallbackWatcher tries to watch and crashes with ENOENT
+  /[/\\]\.local[/\\]/,
   ...(Array.isArray(existingBlockList)
     ? existingBlockList
     : existingBlockList
