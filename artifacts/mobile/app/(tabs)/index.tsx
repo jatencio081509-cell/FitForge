@@ -53,12 +53,23 @@ export default function HomeScreen() {
                 {firstName}
               </Text>
             </View>
-            <Pressable
-              onPress={() => signOut()}
-              style={[styles.signOutBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <Feather name="log-out" size={16} color={colors.mutedForeground} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push("/settings" as never);
+                }}
+                style={[styles.headerBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
+                <Feather name="settings" size={16} color={colors.mutedForeground} />
+              </Pressable>
+              <Pressable
+                onPress={() => signOut()}
+                style={[styles.headerBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
+                <Feather name="log-out" size={16} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
           </View>
 
           <Pressable
@@ -164,7 +175,8 @@ const styles = StyleSheet.create({
   heroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   greeting: { fontSize: 13 },
   heroTitle: { fontSize: 26, lineHeight: 32 },
-  signOutBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  headerActions: { flexDirection: "row", gap: 8 },
+  headerBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   startBtn: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, alignSelf: "stretch", justifyContent: "center" },
   startBtnText: { fontSize: 16, color: "#000" },
   section: { paddingHorizontal: 20, marginTop: 24 },

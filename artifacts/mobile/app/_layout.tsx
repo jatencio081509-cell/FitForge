@@ -19,6 +19,7 @@ import { tokenCache } from "@clerk/expo/token-cache";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { requestNotificationPermissions, scheduleDailyWorkoutReminder } from "@/hooks/useNotifications";
+import { getNotificationSettings } from "@/hooks/useNotificationSettings";
 
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 if (domain) setBaseUrl(`https://${domain}`);
@@ -37,6 +38,10 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen
         name="workout/[id]"
+        options={{ headerShown: false, presentation: "card" }}
+      />
+      <Stack.Screen
+        name="settings"
         options={{ headerShown: false, presentation: "card" }}
       />
     </Stack>
@@ -59,9 +64,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS !== "web") {
-      requestNotificationPermissions().then((granted) => {
+      getNotificationSettings().then(async (settings) => {
+        if (!settings.enabled) return;
+        const granted = await requestNotificationPermissions();
         if (granted) {
-          scheduleDailyWorkoutReminder(8, 0);
+          scheduleDailyWorkoutReminder(settings.hour, settings.minute);
         }
       });
     }
