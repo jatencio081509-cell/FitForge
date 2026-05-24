@@ -10,8 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Activity, Dumbbell, Info, Loader2, Plus, Trash2, ChevronRight, X, RotateCcw } from "lucide-react";
-import { MuscleFigure3D } from "@/components/muscle-figure-3d";
+import { Search, Activity, Dumbbell, Info, Loader2, Plus, Trash2, ChevronRight } from "lucide-react";
 
 const MUSCLE_GROUPS = ["chest", "back", "legs", "shoulders", "arms", "core", "full_body"];
 const MUSCLE_ICONS: Record<string, string> = {
@@ -52,11 +51,6 @@ function ExerciseDetailDialog({ exercise, children }: { exercise: Exercise; chil
 
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-          {/* 3D Muscle figure */}
-          <div className="flex justify-center py-2 bg-muted/20 rounded-2xl border border-border">
-            <MuscleFigure3D activeMuscles={[exercise.muscleGroup]} size={200} autoRotate />
-          </div>
-
           {/* Description */}
           {exercise.description && (
             <div>
@@ -94,43 +88,11 @@ function ExerciseDetailDialog({ exercise, children }: { exercise: Exercise; chil
   );
 }
 
-// ── 3D Muscle Figure Side Panel ───────────────────────────────────────────────
-
-function MuscleSidePanel({ activeMuscle, onClose }: { activeMuscle: string; onClose?: () => void }) {
-  return (
-    <div className="relative w-full bg-card/50 border border-border rounded-2xl p-4 flex flex-col items-center gap-3">
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors lg:hidden"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Muscles Targeted
-      </p>
-      <MuscleFigure3D activeMuscles={[activeMuscle]} size={240} autoRotate />
-      <p className="text-sm font-medium capitalize text-primary">
-        {activeMuscle.replace("_", " ")}
-      </p>
-      <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
-        Drag to rotate · Highlights primary muscles
-      </p>
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <RotateCcw className="w-3 h-3" /> Auto-rotating 3D model
-      </div>
-    </div>
-  );
-}
-
 export default function Exercises() {
   const [search, setSearch] = useState("");
   const [muscle, setMuscle] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [hoveredMuscle, setHoveredMuscle] = useState<string>("full_body");
-  const [showMobilePanel, setShowMobilePanel] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "", muscleGroup: "chest", equipment: "bodyweight",
     category: "strength", description: "",
@@ -247,123 +209,92 @@ export default function Exercises() {
 
         {/* Muscle group quick-select */}
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => { setMuscle("all"); setHoveredMuscle("full_body"); }}
+          <button onClick={() => setMuscle("all")}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${muscle === "all" ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}>
             All
           </button>
           {MUSCLE_GROUPS.map(mg => (
-            <button key={mg} onClick={() => { setMuscle(mg); setHoveredMuscle(mg); }}
+            <button key={mg} onClick={() => setMuscle(mg)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border flex items-center gap-1.5 ${muscle === mg ? "bg-primary text-black border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50"}`}>
               <span>{MUSCLE_ICONS[mg]}</span>
               <span className="capitalize">{mg.replace("_", " ")}</span>
             </button>
           ))}
-          {/* Mobile: show 3D figure toggle */}
-          <button
-            onClick={() => setShowMobilePanel(v => !v)}
-            className="lg:hidden ml-auto px-3 py-1.5 rounded-full text-sm font-medium border border-primary/40 text-primary bg-primary/5 flex items-center gap-1.5"
-          >
-            <span>🫀</span> 3D Figure
-          </button>
         </div>
 
-        {/* Mobile 3D panel */}
-        {showMobilePanel && (
-          <div className="lg:hidden">
-            <MuscleSidePanel
-              activeMuscle={hoveredMuscle}
-              onClose={() => setShowMobilePanel(false)}
-            />
+        {/* Search + category filter */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Search exercises..." className="pl-9 bg-card" value={search}
+              onChange={e => setSearch(e.target.value)} />
           </div>
-        )}
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="strength">Strength</SelectItem>
+              <SelectItem value="cardio">Cardio</SelectItem>
+              <SelectItem value="core">Core</SelectItem>
+              <SelectItem value="mobility">Mobility</SelectItem>
+              <SelectItem value="plyometrics">Plyometrics</SelectItem>
+              <SelectItem value="olympic">Olympic</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Two-column layout: exercise list + 3D sidebar */}
-        <div className="flex gap-6 items-start">
-          {/* Left: search + grid */}
-          <div className="flex-1 min-w-0 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search exercises..." className="pl-9 bg-card" value={search}
-                  onChange={e => setSearch(e.target.value)} />
-              </div>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="strength">Strength</SelectItem>
-                  <SelectItem value="cardio">Cardio</SelectItem>
-                  <SelectItem value="core">Core</SelectItem>
-                  <SelectItem value="mobility">Mobility</SelectItem>
-                  <SelectItem value="plyometrics">Plyometrics</SelectItem>
-                  <SelectItem value="olympic">Olympic</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Exercise grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          {isLoading
+            ? Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-28 bg-card rounded-xl animate-pulse" />)
+            : exercises?.map(exercise => (
+              <ExerciseDetailDialog key={exercise.id} exercise={exercise as Exercise}>
+                <Card className="bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40 cursor-pointer">
+                  <CardContent className="p-4 flex gap-3 items-center">
+                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 border border-border group-hover:border-primary/30 transition-colors text-xl">
+                      {MUSCLE_ICONS[exercise.muscleGroup] ?? "🏋️"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h3 className="font-semibold truncate">{exercise.name}</h3>
+                        {exercise.isCustom && <Badge variant="outline" className="text-xs shrink-0">Custom</Badge>}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-1.5">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                          <Activity className="w-3 h-3" /><span className="capitalize">{exercise.muscleGroup.replace("_", " ")}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                          <Dumbbell className="w-3 h-3" /><span className="capitalize">{exercise.equipment}</span>
+                        </span>
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                          <Info className="w-3 h-3" /><span className="capitalize">{exercise.category}</span>
+                        </span>
+                      </div>
+                      {exercise.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{exercise.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                      <button
+                        onClick={e => { e.stopPropagation(); handleDeleteExercise(exercise.id); }}
+                        disabled={deletingId === exercise.id}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100">
+                        {deletingId === exercise.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </ExerciseDetailDialog>
+            ))}
+          {exercises?.length === 0 && (
+            <div className="col-span-full py-16 text-center text-muted-foreground">
+              <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
+              <p>No exercises found. Try a different search or create your own.</p>
             </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-              {isLoading
-                ? Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-28 bg-card rounded-xl animate-pulse" />)
-                : exercises?.map(exercise => (
-                  <ExerciseDetailDialog key={exercise.id} exercise={exercise as Exercise}>
-                    <Card
-                      className="bg-card/50 hover:bg-card/80 transition-all group border-transparent hover:border-primary/40 cursor-pointer"
-                      onMouseEnter={() => setHoveredMuscle(exercise.muscleGroup)}
-                    >
-                      <CardContent className="p-4 flex gap-3 items-center">
-                        <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 border border-border group-hover:border-primary/30 transition-colors text-xl">
-                          {MUSCLE_ICONS[exercise.muscleGroup] ?? "🏋️"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <h3 className="font-semibold truncate">{exercise.name}</h3>
-                            {exercise.isCustom && <Badge variant="outline" className="text-xs shrink-0">Custom</Badge>}
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mb-1.5">
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
-                              <Activity className="w-3 h-3" /><span className="capitalize">{exercise.muscleGroup.replace("_", " ")}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
-                              <Dumbbell className="w-3 h-3" /><span className="capitalize">{exercise.equipment}</span>
-                            </span>
-                            <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-md border border-border">
-                              <Info className="w-3 h-3" /><span className="capitalize">{exercise.category}</span>
-                            </span>
-                          </div>
-                          {exercise.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{exercise.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                          <button
-                            onClick={e => { e.stopPropagation(); handleDeleteExercise(exercise.id); }}
-                            disabled={deletingId === exercise.id}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100">
-                            {deletingId === exercise.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <Trash2 className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </ExerciseDetailDialog>
-                ))}
-              {exercises?.length === 0 && (
-                <div className="col-span-full py-16 text-center text-muted-foreground">
-                  <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                  <p>No exercises found. Try a different search or create your own.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: sticky 3D muscle figure (desktop only) */}
-          <div className="hidden lg:block w-60 xl:w-72 shrink-0">
-            <div className="sticky top-6">
-              <MuscleSidePanel activeMuscle={hoveredMuscle} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </AppLayout>

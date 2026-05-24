@@ -15,7 +15,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
-import { MuscleFigure } from "@/components/MuscleFigure";
 import { useListExercises, useAiSuggestExercises } from "@workspace/api-client-react";
 import type { MuscleGroup } from "@/components/MuscleFigure";
 
@@ -106,13 +105,8 @@ export default function MuscleDetailScreen() {
                 {info.desc}
               </Text>
             </View>
-            <View style={styles.heroFigure}>
-              <MuscleFigure
-                activeMuscles={[muscleGroup]}
-                primaryColor={colors.primary}
-                bodyColor={colors.card}
-                size={75}
-              />
+            <View style={[styles.heroFigure, { backgroundColor: colors.primary + "20", borderRadius: 20, alignItems: "center", justifyContent: "center" }]}>
+              <Text style={{ fontSize: 40 }}>{info.emoji}</Text>
             </View>
           </View>
 

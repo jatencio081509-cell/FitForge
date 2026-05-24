@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform,
   Dimensions, ActivityIndicator,
 } from "react-native";
+import MapView, { Polyline, Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -196,6 +197,7 @@ export default function RunningTab() {
     tabTextActive: { color: colors.foreground },
     card: { margin: 16, backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
     cardActive: { borderColor: colors.primary },
+    mapContainer: { height: 220, marginHorizontal: 16, marginBottom: 8, borderRadius: 16, overflow: "hidden", borderWidth: 1.5, borderColor: colors.border },
     timerLabel: { textAlign: "center", fontSize: 72, fontFamily: "Outfit_700Bold", color: colors.primary, paddingTop: 32 },
     timerIdle: { color: colors.mutedForeground },
     timerPaused: { color: "#F59E0B" },
@@ -258,6 +260,58 @@ export default function RunningTab() {
                   {status === "idle" ? "Ready to run" : status === "active" ? "● Live tracking" : status === "paused" ? "Paused" : "Completed"}
                 </Text>
               </View>
+
+              {/* Live route map */}
+              {status !== "idle" && Platform.OS !== "web" && (
+                <View style={[s.mapContainer, status === "active" && { borderColor: colors.primary + "80" }]}>
+                  <MapView
+                    style={StyleSheet.absoluteFillObject}
+                    provider={PROVIDER_DEFAULT}
+                    showsUserLocation
+                    followsUserLocation={status === "active"}
+                    userInterfaceStyle="dark"
+                    showsCompass={false}
+                    showsScale={false}
+                    initialRegion={
+                      routePoints.length > 0
+                        ? {
+                            latitude: routePoints[routePoints.length - 1].lat,
+                            longitude: routePoints[routePoints.length - 1].lng,
+                            latitudeDelta: 0.004,
+                            longitudeDelta: 0.004,
+                          }
+                        : undefined
+                    }
+                  >
+                    {routePoints.length > 1 && (
+                      <Polyline
+                        coordinates={routePoints.map(p => ({ latitude: p.lat, longitude: p.lng }))}
+                        strokeColor="#00E6D2"
+                        strokeWidth={4}
+                        lineCap="round"
+                        lineJoin="round"
+                      />
+                    )}
+                    {routePoints.length > 0 && (
+                      <Marker
+                        coordinate={{ latitude: routePoints[0].lat, longitude: routePoints[0].lng }}
+                        pinColor="#22C55E"
+                        title="Start"
+                      />
+                    )}
+                    {status === "finished" && routePoints.length > 0 && (
+                      <Marker
+                        coordinate={{
+                          latitude: routePoints[routePoints.length - 1].lat,
+                          longitude: routePoints[routePoints.length - 1].lng,
+                        }}
+                        pinColor="#EF4444"
+                        title="Finish"
+                      />
+                    )}
+                  </MapView>
+                </View>
+              )}
 
               {status !== "idle" && (
                 <View style={s.statsGrid}>

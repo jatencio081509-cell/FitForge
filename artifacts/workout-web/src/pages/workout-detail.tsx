@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MuscleFigure, getMusclesForWorkout } from "@/components/muscle-figure";
 import { useToast } from "@/hooks/use-toast";
 
 type SetState = "idle" | "done";
@@ -61,11 +60,6 @@ function ExerciseInfoDialog({
               <Badge variant="outline" className="capitalize">{exercise.equipment}</Badge>
             )}
           </div>
-          {exercise.muscleGroup && (
-            <div className="flex justify-center py-2">
-              <MuscleFigure activeMuscles={[exercise.muscleGroup]} size={130} />
-            </div>
-          )}
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 bg-background rounded-xl border border-border">
               <div className="text-2xl font-black text-primary">{exercise.sets}</div>
@@ -332,7 +326,6 @@ export default function WorkoutDetail() {
     );
   }
 
-  const activeMuscles = getMusclesForWorkout(workout.exercises ?? []);
 
   return (
     <AppLayout>
@@ -373,20 +366,6 @@ export default function WorkoutDetail() {
             </div>
           </div>
 
-          {/* Anatomical muscle figure */}
-          {workout.exercises?.length > 0 && (
-            <div className="flex flex-col items-center gap-2 bg-card/50 rounded-2xl border border-border p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Muscles Worked</p>
-              <MuscleFigure activeMuscles={activeMuscles} size={130} />
-              <div className="flex flex-wrap gap-1 justify-center max-w-[140px]">
-                {activeMuscles.map(m => (
-                  <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium capitalize">
-                    {m.replace("_", " ")}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Exercise list */}
