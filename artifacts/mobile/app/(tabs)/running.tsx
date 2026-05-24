@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform,
   Dimensions, ActivityIndicator,
 } from "react-native";
-import MapView, { Polyline, Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import RouteMap from "@/components/RouteMap";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -262,54 +262,9 @@ export default function RunningTab() {
               </View>
 
               {/* Live route map */}
-              {status !== "idle" && Platform.OS !== "web" && (
+              {status !== "idle" && (
                 <View style={[s.mapContainer, status === "active" && { borderColor: colors.primary + "80" }]}>
-                  <MapView
-                    style={StyleSheet.absoluteFillObject}
-                    provider={PROVIDER_DEFAULT}
-                    showsUserLocation
-                    followsUserLocation={status === "active"}
-                    userInterfaceStyle="dark"
-                    showsCompass={false}
-                    showsScale={false}
-                    initialRegion={
-                      routePoints.length > 0
-                        ? {
-                            latitude: routePoints[routePoints.length - 1].lat,
-                            longitude: routePoints[routePoints.length - 1].lng,
-                            latitudeDelta: 0.004,
-                            longitudeDelta: 0.004,
-                          }
-                        : undefined
-                    }
-                  >
-                    {routePoints.length > 1 && (
-                      <Polyline
-                        coordinates={routePoints.map(p => ({ latitude: p.lat, longitude: p.lng }))}
-                        strokeColor="#00E6D2"
-                        strokeWidth={4}
-                        lineCap="round"
-                        lineJoin="round"
-                      />
-                    )}
-                    {routePoints.length > 0 && (
-                      <Marker
-                        coordinate={{ latitude: routePoints[0].lat, longitude: routePoints[0].lng }}
-                        pinColor="#22C55E"
-                        title="Start"
-                      />
-                    )}
-                    {status === "finished" && routePoints.length > 0 && (
-                      <Marker
-                        coordinate={{
-                          latitude: routePoints[routePoints.length - 1].lat,
-                          longitude: routePoints[routePoints.length - 1].lng,
-                        }}
-                        pinColor="#EF4444"
-                        title="Finish"
-                      />
-                    )}
-                  </MapView>
+                  <RouteMap routePoints={routePoints} status={status} style={StyleSheet.absoluteFillObject} />
                 </View>
               )}
 
