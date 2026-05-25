@@ -1,9 +1,5 @@
-import { Stack } from "expo-router";
-import { useAuth } from "@clerk/expo";
-import { Redirect } from "expo-router";
+import { Slot } from "expo-router";
 
-export default function AuthLayout() {
-  const { isSignedIn } = useAuth();
-  if (isSignedIn) return <Redirect href="/(tabs)" />;
-  return <Stack screenOptions={{ headerShown: false }} />;
+export default function RootLayout() {
+  return <Slot />;
 }
