@@ -1,6 +1,6 @@
 # FitForge — AI Workout App
 
-An AI-powered fitness tracker with a React web app (desktop) and Expo mobile app. Features include workout plans, exercise library, workout logging, progress analytics (charts, personal records), and an AI coach powered by GPT-4o.
+An fitness tracker with a React web app (desktop) and Expo mobile app. Features include workout plans, exercise library, workout logging, progress analytics (charts, personal records), and an AI coach powered by GPT-4o.
 
 ## Run & Operate
 
